@@ -1,4 +1,5 @@
 import firebaseConfig from "./firebaseConfig";
+import * as firebase from "firebase";
 
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
@@ -6,6 +7,10 @@ if (!firebase.apps.length) {
   firebase.app();
 }
 
-const Firebase = {};
+const Firebase = {
+  checkUserAuth: (user) => {
+    return firebase.auth().onAuthStateChanged(user);
+  },
+};
 
 export default Firebase;

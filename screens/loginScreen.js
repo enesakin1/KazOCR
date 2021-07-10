@@ -14,7 +14,7 @@ import {
   ScrollView,
 } from "react-native";
 import { Button, Input } from "react-native-elements";
-import { withFirebaseHOC } from "../config/Firebase";
+import { withFirebaseHOC } from "../config";
 import { StatusBar } from "expo-status-bar";
 
 const validationSchema = Yup.object().shape({
@@ -61,107 +61,96 @@ class loginScreen extends React.Component {
   render() {
     const { passwordVisibility, rightIcon } = this.state;
     return (
-      <ScrollView style={{ flex: 1 }}>
-        <KeyboardAvoidingView style={{ flex: 1 }}>
-          <SafeAreaView style={styles.container}>
-            <ImageBackground
-              source={require("../assets/poster.jpg")}
-              style={styles.backgroundImage}
-            >
-              <Formik
-                initialValues={{ email: "", password: "", username: "" }}
-                onSubmit={(values, actions) => {
-                  this.handleOnLogin(values, actions);
-                }}
-                validationSchema={validationSchema}
-              >
-                {({
-                  handleChange,
-                  values,
-                  handleSubmit,
-                  errors,
-                  isValid,
-                  touched,
-                  handleBlur,
-                  isSubmitting,
-                }) => (
-                  <Fragment>
-                    <View style={styles.textView}>
-                      <Input
-                        name="email"
-                        errorMessage={touched.email && errors.email}
-                        style={styles.textInput}
-                        value={values.email}
-                        onChangeText={handleChange("email")}
-                        autoCapitalize="none"
-                        placeholder="Enter email"
-                        leftIcon={
-                          <Ionicons name="ios-mail" size={24} color="orange" />
-                        }
-                        onBlur={handleBlur("email")}
+      <SafeAreaView style={styles.container}>
+        <ImageBackground
+          source={require("../assets/poster.jpg")}
+          style={styles.backgroundImage}
+        >
+          <Formik
+            initialValues={{ email: "", password: "", username: "" }}
+            onSubmit={(values, actions) => {
+              this.handleOnLogin(values, actions);
+            }}
+            validationSchema={validationSchema}
+          >
+            {({
+              handleChange,
+              values,
+              handleSubmit,
+              errors,
+              isValid,
+              touched,
+              handleBlur,
+              isSubmitting,
+            }) => (
+              <Fragment>
+                <View style={styles.textView}>
+                  <Input
+                    name="email"
+                    errorMessage={touched.email && errors.email}
+                    style={styles.textInput}
+                    value={values.email}
+                    onChangeText={handleChange("email")}
+                    autoCapitalize="none"
+                    placeholder="Enter email"
+                    leftIcon={
+                      <Ionicons name="ios-mail" size={24} color="orange" />
+                    }
+                    onBlur={handleBlur("email")}
+                  />
+                  <Input
+                    name="password"
+                    errorMessage={touched.password && errors.password}
+                    style={styles.textInput}
+                    value={values.password}
+                    onChangeText={handleChange("password")}
+                    placeholder="Enter password"
+                    secureTextEntry={passwordVisibility}
+                    autoCapitalize="none"
+                    onBlur={handleBlur("password")}
+                    leftIcon={
+                      <Ionicons
+                        name="ios-lock-closed"
+                        size={24}
+                        color="orange"
                       />
-                      <Input
-                        name="password"
-                        errorMessage={touched.password && errors.password}
-                        style={styles.textInput}
-                        value={values.password}
-                        onChangeText={handleChange("password")}
-                        placeholder="Enter password"
-                        secureTextEntry={passwordVisibility}
-                        autoCapitalize="none"
-                        onBlur={handleBlur("password")}
-                        leftIcon={
-                          <Ionicons
-                            name="ios-lock-closed"
-                            size={24}
-                            color="orange"
-                          />
-                        }
-                        rightIcon={
-                          <TouchableOpacity
-                            onPress={this.handlePasswordVisibility}
-                          >
-                            <Ionicons
-                              name={rightIcon}
-                              size={28}
-                              color="orange"
-                            />
-                          </TouchableOpacity>
-                        }
-                      />
-                    </View>
+                    }
+                    rightIcon={
+                      <TouchableOpacity onPress={this.handlePasswordVisibility}>
+                        <Ionicons name={rightIcon} size={28} color="orange" />
+                      </TouchableOpacity>
+                    }
+                  />
+                </View>
 
-                    <View style={styles.buttonContainer}>
-                      <Button
-                        buttonType="outline"
-                        buttonStyle={{
-                          backgroundColor: "orange",
-                          borderRadius: 10,
-                        }}
-                        onPress={handleSubmit}
-                        title="Login"
-                        buttonColor="#039BE5"
-                        disabled={!isValid || isSubmitting}
-                        loading={isSubmitting}
-                      />
-                      <Button
-                        title="Don't have an account? Sign Up"
-                        onPress={this.goToSignup}
-                        titleStyle={{
-                          color: "#F57C00",
-                          backgroundColor: "white",
-                        }}
-                        type="clear"
-                      />
-                    </View>
-                  </Fragment>
-                )}
-              </Formik>
-            </ImageBackground>
-          </SafeAreaView>
-        </KeyboardAvoidingView>
+                <View style={styles.buttonContainer}>
+                  <Button
+                    buttonType="outline"
+                    buttonStyle={{
+                      backgroundColor: "orange",
+                      borderRadius: 10,
+                    }}
+                    onPress={handleSubmit}
+                    title="Login"
+                    buttonColor="#039BE5"
+                    disabled={!isValid || isSubmitting}
+                    loading={isSubmitting}
+                  />
+                  <Button
+                    title="Don't have an account? Sign Up"
+                    onPress={this.goToSignup}
+                    titleStyle={{
+                      color: "#F57C00",
+                    }}
+                    type="clear"
+                  />
+                </View>
+              </Fragment>
+            )}
+          </Formik>
+        </ImageBackground>
         <StatusBar hidden={true} />
-      </ScrollView>
+      </SafeAreaView>
     );
   }
 }
@@ -169,10 +158,6 @@ class loginScreen extends React.Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  logoContainer: {
-    flex: 0.7,
-    marginTop: 5,
   },
   buttonContainer: {
     margin: 25,
@@ -188,13 +173,7 @@ const styles = StyleSheet.create({
     marginLeft: "16%",
     marginRight: "16%",
     justifyContent: "center",
-  },
-  logo: {
-    alignSelf: "center",
-    resizeMode: "contain",
-    aspectRatio: 0.7,
-    justifyContent: "center",
-    borderRadius: 10,
+    backgroundColor: "#e3e5e8",
   },
   backgroundImage: {
     width: width,

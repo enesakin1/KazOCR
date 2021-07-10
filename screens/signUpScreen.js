@@ -14,7 +14,7 @@ import {
   ScrollView,
 } from "react-native";
 import { Button, Input } from "react-native-elements";
-import { withFirebaseHOC } from "../config/Firebase";
+import { withFirebaseHOC } from "../config";
 import { StatusBar } from "expo-status-bar";
 
 const validationSchema = Yup.object().shape({
@@ -78,8 +78,8 @@ class signUpScreen extends React.Component {
   render() {
     const { passwordVisibility, rightIcon } = this.state;
     return (
-      <ScrollView style={{ flex: 1 }}>
-        <KeyboardAvoidingView style={{ flex: 1 }}>
+      <ScrollView>
+        <KeyboardAvoidingView>
           <SafeAreaView style={styles.container}>
             <ImageBackground
               source={require("../assets/poster.jpg")}
@@ -183,7 +183,6 @@ class signUpScreen extends React.Component {
                         onPress={this.goToLogin}
                         titleStyle={{
                           color: "#F57C00",
-                          backgroundColor: "white",
                         }}
                         type="clear"
                       />
@@ -204,10 +203,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  logoContainer: {
-    flex: 1.7,
-    marginTop: 5,
-  },
   buttonContainer: {
     margin: 25,
     flex: 0.7,
@@ -218,16 +213,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   textView: {
-    flex: 1.3,
+    flex: 0.4,
     marginLeft: "16%",
     marginRight: "16%",
-  },
-  logo: {
-    alignSelf: "center",
-    resizeMode: "contain",
-    aspectRatio: 0.7,
-    justifyContent: "center",
-    borderRadius: 10,
+    backgroundColor: "#e3e5e8",
   },
   backgroundImage: {
     width: Dimensions.get("window").width,

@@ -1,6 +1,6 @@
 import React from "react";
-import { withFirebaseHOC } from "../config/Firebase";
-import LoadingScreen from "./loadingScreen";
+import { withFirebaseHOC } from "../config";
+import LoadingScreen from "../screens/loadingScreen";
 
 class Initial extends React.Component {
   componentDidMount = async () => {
