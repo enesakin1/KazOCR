@@ -31,6 +31,7 @@ const validationSchema = Yup.object().shape({
     .required("Please enter an username")
     .min(6, "Username must have at least 6 characters "),
 });
+const { width, height } = Dimensions.get("window");
 
 class signUpScreen extends React.Component {
   state = {
@@ -82,7 +83,7 @@ class signUpScreen extends React.Component {
         <KeyboardAvoidingView>
           <SafeAreaView style={styles.container}>
             <ImageBackground
-              source={require("../assets/poster.jpg")}
+              source={require("../assets/poster.png")}
               style={styles.backgroundImage}
             >
               <Formik
@@ -109,6 +110,7 @@ class signUpScreen extends React.Component {
                         errorMessage={touched.email && errors.email}
                         style={styles.textInput}
                         value={values.email}
+                        placeholderTextColor="#565757"
                         onChangeText={handleChange("email")}
                         autoCapitalize="none"
                         placeholder="Enter email"
@@ -122,6 +124,7 @@ class signUpScreen extends React.Component {
                         style={styles.textInput}
                         errorMessage={touched.username && errors.username}
                         value={values.username}
+                        placeholderTextColor="#565757"
                         onChangeText={handleChange("username")}
                         placeholder="Enter username"
                         autoCapitalize="none"
@@ -139,6 +142,7 @@ class signUpScreen extends React.Component {
                         errorMessage={touched.password && errors.password}
                         style={styles.textInput}
                         value={values.password}
+                        placeholderTextColor="#565757"
                         onChangeText={handleChange("password")}
                         placeholder="Enter password"
                         secureTextEntry={passwordVisibility}
@@ -163,29 +167,28 @@ class signUpScreen extends React.Component {
                           </TouchableOpacity>
                         }
                       />
-                    </View>
-
-                    <View style={styles.buttonContainer}>
-                      <Button
-                        buttonType="outline"
-                        buttonStyle={{
-                          backgroundColor: "orange",
-                          borderRadius: 10,
-                        }}
-                        onPress={handleSubmit}
-                        title="Sign Up"
-                        buttonColor="#039BE5"
-                        disabled={!isValid || isSubmitting}
-                        loading={isSubmitting}
-                      />
-                      <Button
-                        title="Already have an account? Login"
-                        onPress={this.goToLogin}
-                        titleStyle={{
-                          color: "#F57C00",
-                        }}
-                        type="clear"
-                      />
+                      <View style={styles.buttonContainer}>
+                        <Button
+                          buttonType="outline"
+                          buttonStyle={{
+                            backgroundColor: "orange",
+                            borderRadius: 10,
+                          }}
+                          onPress={handleSubmit}
+                          title="Sign Up"
+                          buttonColor="#039BE5"
+                          disabled={!isValid || isSubmitting}
+                          loading={isSubmitting}
+                        />
+                        <Button
+                          title="Already have an account? Login"
+                          onPress={this.goToLogin}
+                          titleStyle={{
+                            color: "#F57C00",
+                          }}
+                          type="clear"
+                        />
+                      </View>
                     </View>
                   </Fragment>
                 )}
@@ -201,27 +204,27 @@ class signUpScreen extends React.Component {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   buttonContainer: {
-    margin: 25,
-    flex: 0.7,
-    marginLeft: "10%",
-    marginRight: "10%",
+    margin: 8,
   },
   textInput: {
     fontSize: 16,
   },
   textView: {
-    flex: 0.4,
+    flex: 0.51,
     marginLeft: "16%",
     marginRight: "16%",
-    backgroundColor: "#e3e5e8",
+    justifyContent: "center",
+    backgroundColor: "rgba(114, 176, 187, 0.23)",
+    borderRadius: 25,
   },
   backgroundImage: {
-    width: Dimensions.get("window").width,
-    height: Dimensions.get("window").height,
-    flex: 1,
+    width: width,
+    height: height,
+    justifyContent: "center",
   },
   icons: {
     paddingLeft: 100,

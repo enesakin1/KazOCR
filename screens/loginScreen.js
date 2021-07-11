@@ -63,7 +63,7 @@ class loginScreen extends React.Component {
     return (
       <SafeAreaView style={styles.container}>
         <ImageBackground
-          source={require("../assets/poster.jpg")}
+          source={require("../assets/poster.png")}
           style={styles.backgroundImage}
         >
           <Formik
@@ -90,9 +90,10 @@ class loginScreen extends React.Component {
                     errorMessage={touched.email && errors.email}
                     style={styles.textInput}
                     value={values.email}
+                    placeholderTextColor="#565757"
                     onChangeText={handleChange("email")}
                     autoCapitalize="none"
-                    placeholder="Enter email"
+                    placeholder="E-mail"
                     leftIcon={
                       <Ionicons name="ios-mail" size={24} color="orange" />
                     }
@@ -103,8 +104,9 @@ class loginScreen extends React.Component {
                     errorMessage={touched.password && errors.password}
                     style={styles.textInput}
                     value={values.password}
+                    placeholderTextColor="#565757"
                     onChangeText={handleChange("password")}
-                    placeholder="Enter password"
+                    placeholder="Password"
                     secureTextEntry={passwordVisibility}
                     autoCapitalize="none"
                     onBlur={handleBlur("password")}
@@ -121,29 +123,27 @@ class loginScreen extends React.Component {
                       </TouchableOpacity>
                     }
                   />
-                </View>
-
-                <View style={styles.buttonContainer}>
-                  <Button
-                    buttonType="outline"
-                    buttonStyle={{
-                      backgroundColor: "orange",
-                      borderRadius: 10,
-                    }}
-                    onPress={handleSubmit}
-                    title="Login"
-                    buttonColor="#039BE5"
-                    disabled={!isValid || isSubmitting}
-                    loading={isSubmitting}
-                  />
-                  <Button
-                    title="Don't have an account? Sign Up"
-                    onPress={this.goToSignup}
-                    titleStyle={{
-                      color: "#F57C00",
-                    }}
-                    type="clear"
-                  />
+                  <View style={styles.buttonContainer}>
+                    <Button
+                      buttonType="outline"
+                      buttonStyle={{
+                        backgroundColor: "orange",
+                        borderRadius: 10,
+                      }}
+                      onPress={handleSubmit}
+                      title="Login"
+                      disabled={!isValid || isSubmitting}
+                      loading={isSubmitting}
+                    />
+                    <Button
+                      title={"Don't have an account? \nSign Up"}
+                      onPress={this.goToSignup}
+                      titleStyle={{
+                        color: "#F57C00",
+                      }}
+                      type="clear"
+                    />
+                  </View>
                 </View>
               </Fragment>
             )}
@@ -157,28 +157,27 @@ class loginScreen extends React.Component {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   buttonContainer: {
-    margin: 25,
-    flex: 0.4,
-    marginLeft: "10%",
-    marginRight: "10%",
+    margin: 8,
   },
   textInput: {
     fontSize: 16,
   },
   textView: {
-    flex: 0.4,
+    flex: 0.43,
     marginLeft: "16%",
     marginRight: "16%",
     justifyContent: "center",
-    backgroundColor: "#e3e5e8",
+    backgroundColor: "rgba(114, 176, 187, 0.23)",
+    borderRadius: 25,
   },
   backgroundImage: {
     width: width,
     height: height,
-    flex: 1,
+    justifyContent: "center",
   },
   icons: {
     paddingLeft: 100,
