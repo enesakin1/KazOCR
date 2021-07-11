@@ -50,28 +50,23 @@ class signUpScreen extends React.Component {
   handleOnSignup = async (values, actions) => {
     const { username, email, password } = values;
 
-    try {
-      const response = await this.props.firebase.signupWithEmail(
-        email,
-        password
-      );
+    const response = await this.props.firebase.signupWithEmail(email, password);
 
-      if (response.user.uid) {
-        const { uid } = response.user;
-        const expoToken = "";
-        const photouploaded = false;
-        const userData = {
-          email,
-          username,
-          uid,
-          photouploaded,
-          expoToken,
-          numberOfFollowers: 0,
-        };
-        await this.props.firebase.createNewUser(userData);
-        this.props.navigation.navigate("App");
-      }
-    } catch (error) {
+    if (response.user.uid) {
+      const { uid } = response.user;
+      const expoToken = "";
+      const photouploaded = false;
+      const userData = {
+        email,
+        username,
+        uid,
+        photouploaded,
+        expoToken,
+        numberOfFollowers: 0,
+      };
+      await this.props.firebase.createNewUser(userData);
+      this.props.navigation.navigate("App");
+    } else {
       actions.setSubmitting(false);
       alert("You have already signed up with this e-mail");
     }

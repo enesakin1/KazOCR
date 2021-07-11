@@ -7,11 +7,7 @@ import { withFirebaseHOC } from "../config";
 
 function DrawerContent(props) {
   _signOut = async () => {
-    try {
-      await props.firebase.signOut();
-    } catch (error) {
-      console.log(error);
-    }
+    await props.firebase.signOut();
   };
   return (
     <View style={{ flex: 1, backgroundColor: "#ECF1F4" }}>

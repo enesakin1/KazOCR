@@ -1,20 +1,18 @@
 import React from "react";
 import { withFirebaseHOC } from "../config";
 import LoadingScreen from "../screens/loadingScreen";
+import UserPermissions from "../utilities/UserPermissions";
 
 class Initial extends React.Component {
   componentDidMount = async () => {
-    try {
-      await this.props.firebase.checkUserAuth((user) => {
-        if (user) {
-          this.props.navigation.navigate("App");
-        } else {
-          this.props.navigation.navigate("Auth");
-        }
-      });
-    } catch (error) {
-      console.log(error);
-    }
+    UserPermissions.getCameraPermission();
+    await this.props.firebase.checkUserAuth((user) => {
+      if (user) {
+        this.props.navigation.navigate("App");
+      } else {
+        this.props.navigation.navigate("Auth");
+      }
+    });
   };
   render() {
     return <LoadingScreen />;
