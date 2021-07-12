@@ -13,7 +13,10 @@
     "@react-navigation/stack": "^5.14.5",
     "expo": "~42.0.1",
     "expo-constants": "^11.0.1",
+    "expo-file-system": "~11.1.3",
     "expo-image-picker": "~10.2.2",
+    "expo-media-library": "^12.1.2",
+    "expo-print": "~10.2.1",
     "expo-status-bar": "~1.0.4",
     "expo-updates": "~0.8.1",
     "firebase": "^8.7.1",
@@ -23,15 +26,17 @@
     "react-native": "https://github.com/expo/react-native/archive/sdk-42.0.0.tar.gz",
     "react-native-elements": "^3.4.2",
     "react-native-gesture-handler": "^1.10.3",
+    "react-native-htmlview": "^0.16.0",
     "react-native-paper": "^4.9.2",
+    "react-native-pell-rich-editor": "^1.8.5",
     "react-native-reanimated": "^2.2.0",
     "react-native-screens": "^3.4.0",
     "react-native-uuid": "^2.0.1",
     "react-native-vector-icons": "^8.1.0",
     "react-native-web": "^0.17.1",
+    "react-native-webview": "^11.6.5",
     "react-navigation": "^4.4.4",
-    "yup": "^0.32.9",
-    "expo-file-system": "~11.1.3"
+    "yup": "^0.32.9"
   },
   "devDependencies": {
     "@babel/core": "^7.9.0"
