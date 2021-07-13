@@ -25,13 +25,42 @@ function textScreen({ firebase }) {
   const [bothloading, setBothloading] = useState({ uploading, textLength });
   const RichText = useRef();
 
-  const insertRichTextBox = (response) => {
-    let data = JSON.parse(response);
-    data = data["responses"][0]["textAnnotations"];
-    let text = data[0]["description"];
+  const insertRichTextBox = async (response) => {
+    let paragraphs = [];
+    if (typeof response.responses[0].fullTextAnnotation === "undefined") return;
+    response.responses[0].fullTextAnnotation.pages.forEach((page) => {
+      page.blocks.forEach((block) => {
+        block.paragraphs.forEach((paragraph) => {
+          let para = "";
+          let line = "";
+          paragraph.words.forEach((word) => {
+            word.symbols.forEach((symbol) => {
+              line += symbol.text;
+              if (typeof symbol.property.detectedBreak !== "undefined") {
+                if (symbol.property.detectedBreak.type == "SPACE") {
+                  line += " ";
+                }
+                if (symbol.property.detectedBreak.type == "EOL_SURE_SPACE") {
+                  line += " ";
+                  para += line;
+                  line = "";
+                }
+                if (symbol.property.detectedBreak.type == "LINE_BREAK") {
+                  para += line;
+                  line = "";
+                }
+              }
+            });
+          });
+          paragraphs.push(para);
+        });
+      });
+    });
+    let text = "";
+    paragraphs.forEach((element) => {
+      text += element + "\n\n";
+    });
     RichText.current?.insertText(text);
-    let stateText = state.text + text;
-    setState({ text: stateText });
   };
   /*useEffect(() => {
     if (typeof state.text !== "undefined" && state.text.length > 0) {
@@ -99,7 +128,6 @@ function textScreen({ firebase }) {
   const pickImage = async () => {
     let pickerResult = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
-      aspect: [4, 3],
     });
     if (!pickerResult.cancelled) {
       handleImagePicked(pickerResult);
@@ -111,16 +139,13 @@ function textScreen({ firebase }) {
       setUploading(true);
       let uploadUrl = await firebase.uploadImageAsync(pickerResult.uri);
       setState({ image: uploadUrl });
-      let requestedFeatures = [
-        { type: "DOCUMENT_TEXT_DETECTION", maxResults: 5 },
-      ];
+      let requestedFeatures = [{ type: "TEXT_DETECTION", maxResults: 5 }];
       let response = await firebase.submitToCloudVision(
         requestedFeatures,
         uploadUrl
       );
-      let responseJSON = JSON.stringify(response);
       setUploading(false);
-      insertRichTextBox(responseJSON);
+      insertRichTextBox(response);
     } catch (e) {
       console.log(e);
       alert("Upload failed, somehow");
