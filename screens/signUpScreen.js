@@ -78,7 +78,7 @@ class signUpScreen extends React.Component {
         <KeyboardAvoidingView>
           <SafeAreaView style={styles.container}>
             <ImageBackground
-              source={require("../assets/poster.png")}
+              source={require("../assets/poster.jpg")}
               style={styles.backgroundImage}
             >
               <Formik

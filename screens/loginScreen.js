@@ -58,7 +58,7 @@ class loginScreen extends React.Component {
     return (
       <SafeAreaView style={styles.container}>
         <ImageBackground
-          source={require("../assets/poster.png")}
+          source={require("../assets/poster.jpg")}
           style={styles.backgroundImage}
         >
           <Formik

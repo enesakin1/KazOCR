@@ -1,13 +1,15 @@
 import React from "react";
 import { withFirebaseHOC } from "../config";
-import LoadingScreen from "../screens/loadingScreen";
 import UserPermissions from "../utilities/UserPermissions";
+import { StyleSheet, View, Text } from "react-native";
+import * as SplashScreen from "expo-splash-screen";
 
 class Initial extends React.Component {
   componentDidMount = async () => {
-    UserPermissions.getCameraPermission();
-    UserPermissions.getMediaLibraryPermission();
-    await this.props.firebase.checkUserAuth((user) => {
+    await UserPermissions.getCameraPermission();
+    await UserPermissions.getMediaLibraryPermission();
+    await SplashScreen.preventAutoHideAsync();
+    await this.props.firebase.checkUserAuth(async (user) => {
       if (user) {
         this.props.navigation.navigate("App");
       } else {
@@ -16,8 +18,7 @@ class Initial extends React.Component {
     });
   };
   render() {
-    return <LoadingScreen />;
+    return null;
   }
 }
-
 export default withFirebaseHOC(Initial);

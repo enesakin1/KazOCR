@@ -1,10 +1,15 @@
 import React from "react";
-import { ActivityIndicator, View, Image, StyleSheet } from "react-native";
+import { ActivityIndicator, View, Image, StyleSheet, Text } from "react-native";
 
 export default function LoadingScreen() {
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color="white" />
+      <Image
+        source={require("../assets/icon1.png")}
+        style={styles.logo}
+      ></Image>
+      <Text style={styles.loading}>Analyzing</Text>
+      <ActivityIndicator size="large" color="white" style={styles.indicator} />
     </View>
   );
 }
@@ -19,8 +24,16 @@ const styles = StyleSheet.create({
   logo: {
     alignSelf: "center",
     resizeMode: "contain",
-    aspectRatio: 0.7,
+    flex: 0.3,
     justifyContent: "center",
     borderRadius: 10,
+  },
+  loading: {
+    fontWeight: "bold",
+    alignSelf: "center",
+    color: "white",
+  },
+  indicator: {
+    marginTop: 10,
   },
 });
