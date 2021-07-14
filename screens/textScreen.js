@@ -1,7 +1,16 @@
 import { StatusBar } from "expo-status-bar";
 import React, { useRef, useState, useEffect, useCallback } from "react";
-import { StyleSheet, View, Alert, ScrollView } from "react-native";
-import { Button } from "react-native-elements";
+import {
+  StyleSheet,
+  View,
+  Alert,
+  ScrollView,
+  Modal,
+  Text,
+  TouchableHighlight,
+  TouchableOpacity,
+} from "react-native";
+import { Button, Input } from "react-native-elements";
 import * as ImagePicker from "expo-image-picker";
 import { withFirebaseHOC } from "../config";
 import * as FileSystem from "expo-file-system";
@@ -14,12 +23,15 @@ import * as Print from "expo-print";
 import * as MediaLibrary from "expo-media-library";
 import Loading from "./loadingScreen";
 import * as SplashScreen from "expo-splash-screen";
+import * as Sharing from "expo-sharing";
 
 function textScreen({ firebase }) {
   const [state, setState] = useState({
     image: "",
     text: "",
   });
+  const [filename, setFilename] = useState("");
+  const [modalVisible, setModalVisible] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [textLength, setTextLength] = useState(0);
   const [bothloading, setBothloading] = useState({ uploading, textLength });
@@ -86,39 +98,25 @@ function textScreen({ firebase }) {
   useEffect(() => {
   }, [bothloading]);*/
 
-  const createAlert = () => {
-    Alert.alert(
-      "SAVE AS PDF",
-      "Are you sure to save this?",
-      [
-        {
-          text: "SAVE",
-          onPress: createPDF,
-        },
-        {
-          text: "No",
-          style: "cancel",
-        },
-      ],
-      { cancelable: false }
-    );
-  };
   const createPDF = async () => {
+    console.log("hey");
     try {
       let { text } = state;
-      let filePath = await Print.printToFileAsync({
+      let fileInfo = await Print.printToFileAsync({
         html: text,
         height: 792,
         width: 612,
         base64: false,
       });
-      const asset = await MediaLibrary.createAssetAsync(filePath.uri);
-      const album = await MediaLibrary.getAlbumAsync("Documents");
-      if (album == null) {
-        await MediaLibrary.createAlbumAsync("Documents", asset, true);
-      } else {
-        await MediaLibrary.addAssetsToAlbumAsync([asset], album, true);
-      }
+      let pdfName =
+        fileInfo.uri.slice(0, fileInfo.uri.lastIndexOf("Print/")) +
+        filename +
+        ".pdf";
+      await FileSystem.moveAsync({
+        from: fileInfo.uri,
+        to: pdfName,
+      });
+      Sharing.shareAsync(pdfName);
     } catch (error) {
       console.log(error);
     }
@@ -164,10 +162,57 @@ function textScreen({ firebase }) {
   };
   return (
     <View style={styles.container}>
-      <Button onPress={createAlert} title="pdf" color="#1985bc" />
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onDismiss={() => {
+          setFilename("");
+        }}
+        onRequestClose={() => {
+          setModalVisible(!modalVisible);
+        }}
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <Text style={styles.modalText}>Enter filename</Text>
+
+            <Input
+              onChangeText={(value) => setFilename(value)}
+              placeholder="Filename..."
+              style={{ backgroundColor: "white" }}
+            />
+            <View style={styles.modalButtonsContainer}>
+              <Button
+                title="Confirm"
+                style={{ margin: 20 }}
+                onPress={() => {
+                  setModalVisible(!modalVisible);
+                  createPDF();
+                }}
+              />
+              <Button
+                title="Cancel"
+                style={{ alignSelf: "flex-end" }}
+                onPress={() => {
+                  setModalVisible(!modalVisible);
+                }}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Button
+        onPress={() => {
+          setModalVisible(true);
+        }}
+        title="Save"
+        color="#1985bc"
+      />
       <Button onPress={pickImage} title="Select Image" color="#1985bc" />
       <Button onPress={takePhoto} title="Take Photo" color="#1985bc" />
       <Button onPress={clearTextBox} title="Clear" color="#1985bc" />
+
       <ScrollView nestedScrollEnabled={true}>
         <RichEditor
           disabled={uploading}
@@ -217,4 +262,39 @@ const styles = StyleSheet.create({
     backgroundColor: "#F5FCFF",
   },
   //End
+  /***************** */
+  enteredView: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 22,
+  },
+  modalView: {
+    margin: 20,
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 35,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  textStyle: {
+    color: "white",
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  modalText: {
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  modalButtonsContainer: {
+    flexDirection: "row",
+  },
+  /***** */
 });
