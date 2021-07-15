@@ -9,6 +9,7 @@ import {
   Text,
   TouchableHighlight,
   TouchableOpacity,
+  TextComponent,
 } from "react-native";
 import { Button, Input } from "react-native-elements";
 import * as ImagePicker from "expo-image-picker";
@@ -24,6 +25,8 @@ import * as MediaLibrary from "expo-media-library";
 import Loading from "./loadingScreen";
 import * as SplashScreen from "expo-splash-screen";
 import * as Sharing from "expo-sharing";
+import * as ImageManipulator from "expo-image-manipulator";
+import { object } from "yup";
 
 function textScreen({ firebase }) {
   const [state, setState] = useState({
@@ -36,53 +39,6 @@ function textScreen({ firebase }) {
   const [textLength, setTextLength] = useState(0);
   const [bothloading, setBothloading] = useState({ uploading, textLength });
   const RichText = useRef();
-
-  const insertRichTextBox = async (response) => {
-    if (typeof response.responses[0].fullTextAnnotation === "undefined") return;
-
-    response.responses[0].fullTextAnnotation.pages.forEach((page) => {
-      page.blocks.forEach((block) => {
-        block.paragraphs.forEach((paragraph) => {
-          let para = "";
-          let line = "";
-          paragraph.words.forEach((word) => {
-            word.symbols.forEach((symbol) => {
-              line += symbol.text;
-              if (typeof symbol.property.detectedBreak !== "undefined") {
-                if (symbol.property.detectedBreak.type == "SPACE") {
-                  line += " ";
-                } else if (
-                  symbol.property.detectedBreak.type == "EOL_SURE_SPACE"
-                ) {
-                  if (line.endsWith("-")) {
-                    line = line.slice(0, -1);
-                  } else {
-                    line += " ";
-                  }
-                  para += line;
-                  line = "";
-                } else if (symbol.property.detectedBreak.type == "LINE_BREAK") {
-                  if (line.endsWith("-")) {
-                    line = line.slice(0, -1);
-                  } else {
-                    line += " ";
-                  }
-                  para += line;
-                  line = "";
-                }
-              }
-            });
-          });
-          para += "\n\n";
-          RichText.current?.insertText(para);
-        });
-      });
-    });
-  };
-  const clearTextBox = () => {
-    RichText.current?.setContentHTML("");
-    setState({ text: "" });
-  };
   /*useEffect(() => {
     if (typeof state.text !== "undefined" && state.text.length > 0) {
       setTextLength(state.text.length);
@@ -97,6 +53,79 @@ function textScreen({ firebase }) {
   }, [uploading, textLength]);
   useEffect(() => {
   }, [bothloading]);*/
+  const parseText = async (response) => {
+    console.log(response.responses[0].textAnnotations[0].description);
+  };
+  const jsonCek = async () => {
+    let queue = await FileSystem.readAsStringAsync(
+      FileSystem.documentDirectory + `offline_stored.json`
+    );
+    parseText(JSON.parse(queue));
+  };
+  const cropImage = async (response, imageInfo) => {
+    if (typeof response.responses[0].localizedObjectAnnotations === "undefined")
+      return;
+    let person = { score: 0 };
+    response.responses[0].localizedObjectAnnotations.forEach((object) => {
+      if (object.name === "Person") {
+        if (object.score > person.score) {
+          person = object;
+        }
+      }
+    });
+    if (person.score == 0) {
+      return;
+    }
+    let width = imageInfo.width;
+    let height = imageInfo.height;
+    imageInfo.width =
+      (person.boundingPoly.normalizedVertices[2].x -
+        person.boundingPoly.normalizedVertices[3].x) *
+      width;
+    imageInfo.height =
+      (person.boundingPoly.normalizedVertices[3].y -
+        person.boundingPoly.normalizedVertices[1].y) *
+      height;
+    imageInfo.x = person.boundingPoly.normalizedVertices[3].x * width;
+    imageInfo.y = person.boundingPoly.normalizedVertices[3].y * height;
+
+    let fileUri = FileSystem.documentDirectory + "test.png";
+    await FileSystem.downloadAsync(imageInfo.uri, fileUri);
+    const manipResult = await ImageManipulator.manipulateAsync(
+      fileUri,
+      [
+        {
+          crop: {
+            originX: imageInfo.x,
+            originY: imageInfo.y - imageInfo.height,
+            width: imageInfo.width,
+            height: imageInfo.height,
+          },
+        },
+      ],
+      { compress: 1, format: ImageManipulator.SaveFormat.PNG }
+    );
+    const asset = await MediaLibrary.createAssetAsync(manipResult.uri);
+    const album = await MediaLibrary.getAlbumAsync("KazOCR");
+    if (album === null) {
+      await MediaLibrary.createAlbumAsync("KazOCR", asset, false);
+    } else {
+      await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+    }
+    /*const assetResult = await MediaLibrary.getAssetsAsync({
+      first: 1,
+      album: album,
+      sortBy: MediaLibrary.SortBy.creationTime,
+    });
+    const hey = assetResult.assets[0];*/
+  };
+  const insertRichTextBox = async (response, imageInfo) => {
+    cropImage(response, imageInfo);
+  };
+  const clearTextBox = () => {
+    RichText.current?.setContentHTML("");
+    setState({ text: "" });
+  };
 
   const createPDF = async () => {
     try {
@@ -145,14 +174,22 @@ function textScreen({ firebase }) {
       let uploadUrl = await firebase.uploadImageAsync(pickerResult.uri);
       setState({ image: uploadUrl });
       let requestedFeatures = [
-        { type: "DOCUMENT_TEXT_DETECTION", maxResults: 5 },
+        { type: "TEXT_DETECTION", maxResults: 5 },
+        { type: "OBJECT_LOCALIZATION", maxResults: 5 },
       ];
       let response = await firebase.submitToCloudVision(
         requestedFeatures,
         uploadUrl
       );
       setUploading(false);
-      insertRichTextBox(response);
+      let imageInfo = {
+        uri: uploadUrl,
+        x: 0,
+        y: 0,
+        height: pickerResult.height,
+        width: pickerResult.width,
+      };
+      insertRichTextBox(response, imageInfo);
     } catch (e) {
       console.log(e);
       alert("Upload failed, somehow");
@@ -211,6 +248,7 @@ function textScreen({ firebase }) {
       <Button onPress={pickImage} title="Select Image" color="#1985bc" />
       <Button onPress={takePhoto} title="Take Photo" color="#1985bc" />
       <Button onPress={clearTextBox} title="Clear" color="#1985bc" />
+      <Button onPress={jsonCek} title="Çek" color="#1985bc" />
 
       <ScrollView nestedScrollEnabled={true}>
         <RichEditor

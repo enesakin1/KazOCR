@@ -23,14 +23,24 @@ function mainScreen({ navigation }) {
 
     prepare();
   }, []);
-  const navigateTextScreen = async () => {
-    navigation.navigate("Text");
+  const navigateScreen = async (screen) => {
+    navigation.navigate(screen);
   };
   return (
     <View style={styles.container}>
       <Button
-        onPress={navigateTextScreen}
+        onPress={() => {
+          navigateScreen("Text");
+        }}
         title="Text"
+        color="#1985bc"
+        style={styles.buttons}
+      />
+      <Button
+        onPress={() => {
+          navigateScreen("Card");
+        }}
+        title="Student ID Card"
         color="#1985bc"
         style={styles.buttons}
       />
