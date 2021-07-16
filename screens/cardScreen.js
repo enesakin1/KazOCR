@@ -36,7 +36,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { TextInput } from "react-native";
 import { Share } from "react-native";
 
-function textScreen({ firebase }) {
+function cardScreen({ firebase }) {
   const defaultPhotoURL = "gs://kazocr-50026.appspot.com/defaultPhoto.png";
   const [state, setState] = useState({
     image: "",
@@ -620,7 +620,7 @@ function textScreen({ firebase }) {
   );
 }
 
-export default withFirebaseHOC(textScreen);
+export default withFirebaseHOC(cardScreen);
 
 const styles = StyleSheet.create({
   container: {
