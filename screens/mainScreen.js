@@ -44,6 +44,14 @@ function mainScreen({ navigation }) {
         color="#1985bc"
         style={styles.buttons}
       />
+      <Button
+        onPress={() => {
+          navigateScreen("Transcript");
+        }}
+        title="Transcript"
+        color="#1985bc"
+        style={styles.buttons}
+      />
       <StatusBar hidden={true} />
     </View>
   );

@@ -48,7 +48,10 @@ function textScreen({ firebase }) {
           paragraph.words.forEach((word) => {
             word.symbols.forEach((symbol) => {
               line += symbol.text;
-              if (typeof symbol.property.detectedBreak !== "undefined") {
+              if (
+                typeof symbol.property !== "undefined" &&
+                typeof symbol.property.detectedBreak !== "undefined"
+              ) {
                 if (symbol.property.detectedBreak.type == "SPACE") {
                   line += " ";
                 } else if (

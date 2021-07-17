@@ -107,7 +107,7 @@ function cardScreen({ firebase }) {
       /[\n:\r]+/gm,
       ""
     );
-    let matches = /ad[ıi]\s*(.*)\s*soyad[ıi]/gim.exec(text);
+    let matches = /ad[ıi]\s*(.*)\s*soyad[ıi]/gi.exec(text);
     if (matches != null && matches.length > 1) {
       userdata.name = matches[1];
     } else {
@@ -123,7 +123,7 @@ function cardScreen({ firebase }) {
       setUploading(false);
       return;
     }
-    matches = /no\s*([a-zA-z]?[0-9]*)/im.exec(text);
+    matches = /no\s*([a-zA-z]?[0-9]*)/gi.exec(text);
     if (matches != null && matches.length > 1) {
       userdata.number = matches[1];
     } else {
