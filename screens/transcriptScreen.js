@@ -47,6 +47,11 @@ function transcriptScreen({ firebase }) {
   const [transcript, setTranscript] = useState([]);
   const [errorText, setErrorText] = useState("");
   const [filename, setFilename] = useState("");
+  const [lecture, setLecture] = useState("");
+  const [grade, setGrade] = useState("");
+  const [semester, setSemester] = useState("");
+  const [lastLecture, setLastLecture] = useState(0);
+  const [addLectureModalVisible, setAddLectureModalVisible] = useState(false);
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -73,6 +78,29 @@ function transcriptScreen({ firebase }) {
     );
     let data = JSON.parse(queue);
     parseText(data);
+  };
+  const deleteLecture = (index, id) => {
+    let temp = [...transcript];
+    let lectureIndex = 0;
+    temp[index].lectures.every((element) => {
+      if (element.id == id) {
+        return false;
+      }
+      lectureIndex++;
+      return true;
+    });
+    temp[index].lectures.splice(lectureIndex, 1);
+    setTranscript(temp);
+  };
+  const createLecture = (index) => {
+    let temp = [...transcript];
+    let counter = lastLecture;
+    let tempGrade = grade.toUpperCase();
+    const lectureInfo = { id: counter, lecture: lecture, grade: tempGrade };
+    temp[index].lectures.push(lectureInfo);
+    counter++;
+    setLastLecture(counter);
+    setTranscript(temp);
   };
   const createHTML = () => {
     setUploading(true);
@@ -185,6 +213,7 @@ function transcriptScreen({ firebase }) {
         tempTranscript[semesterCount - 1].lectures.push(lectureInfo);
       }
     }
+    setLastLecture(lectureCounter);
     setTranscript(tempTranscript);
     setUploading(false);
   };
@@ -241,7 +270,7 @@ function transcriptScreen({ firebase }) {
       setUploading(true);
       let uploadUrl = await firebase.uploadImageAsync(pickerResult.uri);
       let requestedFeatures = [
-        { type: "TEXT_DETECTION", maxResults: 5 },
+        { type: "DOCUMENT_TEXT_DETECTION", maxResults: 5 },
         { type: "OBJECT_LOCALIZATION", maxResults: 5 },
       ];
       let response = await firebase.submitToCloudVision(
@@ -362,12 +391,98 @@ function transcriptScreen({ firebase }) {
           </View>
         </View>
       </Modal>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={addLectureModalVisible}
+        onShow={() => {
+          setLecture("");
+          setGrade("");
+          setSemester("");
+          setErrorText("");
+        }}
+        onRequestClose={() => {
+          setAddLectureModalVisible(!addLectureModalVisible);
+        }}
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <Text style={styles.modalText}>Add Lecture</Text>
 
+            <Input
+              onChangeText={(value) => setSemester(value)}
+              maxLength={2}
+              keyboardType="numeric"
+              placeholder="Semester"
+              style={{ backgroundColor: "white" }}
+            />
+            <Input
+              onChangeText={(value) => setLecture(value)}
+              placeholder="Lecture"
+              style={{ backgroundColor: "white" }}
+            />
+            <Input
+              onChangeText={(value) => setGrade(value)}
+              maxLength={2}
+              placeholder="Grade"
+              style={{ backgroundColor: "white" }}
+            />
+            <Text style={{ color: "red", paddingBottom: 10 }}>{errorText}</Text>
+            <View style={styles.modalButtonsContainer}>
+              <Button
+                title="Confirm"
+                style={{ margin: 20 }}
+                onPress={() => {
+                  let semesterControl = true;
+                  let index = 0;
+                  transcript.every((element) => {
+                    if (element.semester == semester) {
+                      semesterControl = false;
+                      return false;
+                    }
+                    index++;
+                    return true;
+                  });
+                  if (transcript.length == 0) {
+                    setErrorText("Please scan a transcript first");
+                  } else if (lecture.length == 0) {
+                    setErrorText("Lecture name can't be empty");
+                  } else if (grade.length != 2) {
+                    setErrorText("Grade isn't correct");
+                  } else if (semesterControl) {
+                    setErrorText(
+                      "Scanned transcript not contaning entered semester"
+                    );
+                  } else {
+                    setErrorText("");
+                    setAddLectureModalVisible(!addLectureModalVisible);
+                    createLecture(index);
+                  }
+                }}
+              />
+              <Button
+                title="Cancel"
+                style={{ alignSelf: "flex-end" }}
+                onPress={() => {
+                  setAddLectureModalVisible(!addLectureModalVisible);
+                }}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
       <Button
         onPress={() => {
           setSaveModalVisible(true);
         }}
         title="Save"
+        color="#1985bc"
+      />
+      <Button
+        onPress={() => {
+          setAddLectureModalVisible(true);
+        }}
+        title="Add Lecture"
         color="#1985bc"
       />
       <Button
@@ -389,16 +504,47 @@ function transcriptScreen({ firebase }) {
         data={transcript}
         renderItem={({ item }) => (
           <View style={{ padding: 10 }}>
-            <Text style={{ alignSelf: "center", fontWeight: "bold" }}>
-              {item.semester}.Semester{"\n"}
-            </Text>
+            <View style={{ borderWidth: 1, backgroundColor: "#5898fc" }}>
+              <Text
+                style={{
+                  alignSelf: "center",
+                  fontWeight: "bold",
+                }}
+              >
+                {item.semester} .Semester
+              </Text>
+            </View>
             <FlatList
               data={item.lectures}
               renderItem={({ item: item2 }) => (
                 <Grid>
                   <Col size={50}>
                     <Row style={styles.cell}>
+                      <Ionicons
+                        name="trash-outline"
+                        size={17}
+                        color="red"
+                        style={{
+                          position: "absolute",
+                          left: 0,
+                          borderRightWidth: 0.7,
+                          borderRightColor: "red",
+                        }}
+                        onPress={() => {
+                          let index = 0;
+                          transcript.every((element) => {
+                            if (element.semester == item.semester) {
+                              return false;
+                            }
+
+                            index++;
+                            return true;
+                          });
+                          deleteLecture(index, item2.id);
+                        }}
+                      />
                       <TextInput
+                        style={{ paddingLeft: 20 }}
                         multiline={true}
                         onChangeText={(text) => {
                           let temp = [...transcript];
