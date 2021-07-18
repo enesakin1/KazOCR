@@ -36,8 +36,8 @@ import { cos } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { TextInput } from "react-native";
 import { Share } from "react-native";
-import { boolean } from "yup/lib/locale";
-import matchAll from "string.prototype.matchall";
+import { DataTable } from "react-native-paper";
+import { Col, Row, Grid } from "react-native-easy-grid";
 
 function transcriptScreen({ firebase }) {
   const [state, setState] = useState({
@@ -186,7 +186,6 @@ function transcriptScreen({ firebase }) {
       }
     }
     setTranscript(tempTranscript);
-    console.log(tempTranscript);
     setUploading(false);
   };
 
@@ -389,20 +388,88 @@ function transcriptScreen({ firebase }) {
       <FlatList
         data={transcript}
         renderItem={({ item }) => (
-          <View>
-            <Text>{item.semester}</Text>
+          <View style={{ padding: 10 }}>
+            <Text style={{ alignSelf: "center", fontWeight: "bold" }}>
+              {item.semester}.Semester{"\n"}
+            </Text>
             <FlatList
               data={item.lectures}
-              renderItem={({ item2 }) => (
-                <View>
-                  <Text>{item2.lecture}</Text>
-                </View>
+              renderItem={({ item: item2 }) => (
+                <Grid>
+                  <Col size={50}>
+                    <Row style={styles.cell}>
+                      <TextInput
+                        multiline={true}
+                        onChangeText={(text) => {
+                          let temp = [...transcript];
+                          let semesterIndex = 0;
+                          let lectureIndex = 0;
+                          temp.every((element) => {
+                            if (element.semester == item.semester) {
+                              return false;
+                            }
+                            semesterIndex++;
+                            return true;
+                          });
+                          temp[semesterIndex].lectures.every((element) => {
+                            if (element.id == item2.id) {
+                              return false;
+                            }
+                            lectureIndex++;
+                            return true;
+                          });
+                          temp[semesterIndex].lectures[lectureIndex] = {
+                            ...temp[semesterIndex].lectures[lectureIndex],
+                            lecture: text,
+                          };
+                          setTranscript(temp);
+                        }}
+                      >
+                        {item2.lecture}
+                      </TextInput>
+                    </Row>
+                  </Col>
+                  <Col size={15}>
+                    <Row style={styles.cell}>
+                      <TextInput
+                        multiline={true}
+                        maxLength={2}
+                        onChangeText={(text) => {
+                          let temp = [...transcript];
+                          let semesterIndex = 0;
+                          let lectureIndex = 0;
+                          temp.every((element) => {
+                            if (element.semester == item.semester) {
+                              return false;
+                            }
+                            semesterIndex++;
+                            return true;
+                          });
+                          temp[semesterIndex].lectures.every((element) => {
+                            if (element.id == item2.id) {
+                              return false;
+                            }
+                            lectureIndex++;
+                            return true;
+                          });
+                          temp[semesterIndex].lectures[lectureIndex] = {
+                            ...temp[semesterIndex].lectures[lectureIndex],
+                            grade: text,
+                          };
+                          setTranscript(temp);
+                        }}
+                      >
+                        {item2.grade}
+                      </TextInput>
+                    </Row>
+                  </Col>
+                </Grid>
               )}
-              keyExtractor={(item2) => item2.id.toString()}
+              keyExtractor={(item2, index) => item2 + index}
             />
           </View>
         )}
-        keyExtractor={(item) => item.semester.toString()}
+        keyExtractor={(item, index) => item + index}
       />
       <StatusBar hidden={true} />
     </View>
@@ -451,4 +518,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   /***** */
+  cell: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 });
