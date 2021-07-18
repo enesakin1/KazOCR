@@ -434,7 +434,7 @@ function cardScreen({ firebase }) {
         animationType="slide"
         transparent={true}
         visible={saveModalVisible}
-        onDismiss={() => {
+        onShow={() => {
           setFilename("");
           setErrorText("");
         }}

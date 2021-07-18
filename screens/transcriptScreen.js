@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   FlatList,
   ToastAndroid,
+  SectionList,
 } from "react-native";
 import { Button, Input } from "react-native-elements";
 import * as ImagePicker from "expo-image-picker";
@@ -98,12 +99,14 @@ function transcriptScreen({ firebase }) {
       /[\n\r]+/gm,
       " "
     );
+
     let regex = /ders(.*)/gi;
     let replaced = text.replace(regex, "");
     if (replaced.length < 1) {
       return;
     }
-    const startCemester = replaced[0];
+    let lectureCounter = 0;
+    let startSemester = replaced[0];
     const columnCount = (replaced.match(/\byar[ıi]y[ıi]l\b/gi) || []).length;
     const semesterCount = (text.match(/\byar[ıi]y[ıi]l\b/gi) || []).length;
     const rowCount = semesterCount / columnCount;
@@ -132,25 +135,27 @@ function transcriptScreen({ firebase }) {
     let tempCoulumnCount = 0;
     let lastCoulumns = [];
     for (let index = 0; index < semesterCount; index++) {
-      tempTranscript.push([]);
+      tempTranscript.push({ semester: startSemester, lectures: [] });
+      startSemester++;
     }
-    for (let i = 0; i < semesterCount; i++) {
+    for (let i = 0; i < firstIndex; i++) {
       if (i != 0 && i % columnCount == 0) {
         tempCoulumnCount += columnCount;
       }
       let counter = tempCoulumnCount;
       while ((matches = regex.exec(textColumn[i])) !== null) {
-        let lectureInfo = { lecture: "", grade: "" };
+        let lectureInfo = { id: lectureCounter, lecture: "", grade: "" };
         if (matches.length > 2);
         {
           lectureInfo.lecture = matches[1];
           lectureInfo.grade = matches[2];
+          lectureCounter++;
         }
         if (i % columnCount == 0) {
           if (counter >= columnCount + tempCoulumnCount) {
             counter = tempCoulumnCount;
           }
-          tempTranscript[counter].push(lectureInfo);
+          tempTranscript[counter].lectures.push(lectureInfo);
         } else {
           counter++;
           while (lastCoulumns.includes(counter)) {
@@ -159,7 +164,7 @@ function transcriptScreen({ firebase }) {
           if (counter >= columnCount + tempCoulumnCount) {
             counter = tempCoulumnCount;
           }
-          tempTranscript[counter].push(lectureInfo);
+          tempTranscript[counter].lectures.push(lectureInfo);
         }
         counter++;
       }
@@ -168,6 +173,20 @@ function transcriptScreen({ firebase }) {
       }
       lastCoulumns.push(counter);
     }
+    if (rowSingle) {
+      while ((matches = regex.exec(textColumn[semesterCount - 1])) !== null) {
+        let lectureInfo = { id: lectureCounter, lecture: "", grade: "" };
+        if (matches.length > 2);
+        {
+          lectureInfo.lecture = matches[1];
+          lectureInfo.grade = matches[2];
+          lectureCounter++;
+        }
+        tempTranscript[semesterCount - 1].lectures.push(lectureInfo);
+      }
+    }
+    setTranscript(tempTranscript);
+    console.log(tempTranscript);
     setUploading(false);
   };
 
@@ -244,7 +263,7 @@ function transcriptScreen({ firebase }) {
         animationType="slide"
         transparent={true}
         visible={saveModalVisible}
-        onDismiss={() => {
+        onShow={() => {
           setFilename("");
           setErrorText("");
         }}
@@ -366,8 +385,25 @@ function transcriptScreen({ firebase }) {
         title="bilgi"
         color="#1985bc"
       />
-
       <Button onPress={jsonCek} title="json" color="#1985bc" />
+      <FlatList
+        data={transcript}
+        renderItem={({ item }) => (
+          <View>
+            <Text>{item.semester}</Text>
+            <FlatList
+              data={item.lectures}
+              renderItem={({ item2 }) => (
+                <View>
+                  <Text>{item2.lecture}</Text>
+                </View>
+              )}
+              keyExtractor={(item2) => item2.id.toString()}
+            />
+          </View>
+        )}
+        keyExtractor={(item) => item.semester.toString()}
+      />
       <StatusBar hidden={true} />
     </View>
   );

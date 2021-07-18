@@ -168,7 +168,7 @@ function textScreen({ firebase }) {
         animationType="slide"
         transparent={true}
         visible={modalVisible}
-        onDismiss={() => {
+        onShow={() => {
           setFilename("");
         }}
         onRequestClose={() => {
