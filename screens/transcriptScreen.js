@@ -40,10 +40,6 @@ import { DataTable } from "react-native-paper";
 import { Col, Row, Grid } from "react-native-easy-grid";
 
 function transcriptScreen({ firebase }) {
-  const [state, setState] = useState({
-    image: "",
-    text: "",
-  });
   const [transcript, setTranscript] = useState([]);
   const [errorText, setErrorText] = useState("");
   const [filename, setFilename] = useState("");
@@ -56,22 +52,6 @@ function transcriptScreen({ firebase }) {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [textLength, setTextLength] = useState(0);
-  const [bothloading, setBothloading] = useState({ uploading, textLength });
-
-  /*useEffect(() => {
-    if (typeof state.text !== "undefined" && state.text.length > 0) {
-      setTextLength(state.text.length);
-    }
-  }, [state.text]);
-  useEffect(() => {
-    setBothloading((prev) => {
-      return uploading !== prev.uploading && textLength !== prev.textLength
-        ? { uploading, textLength }
-        : prev;
-    });
-  }, [uploading, textLength]);
-  useEffect(() => {
-  }, [bothloading]);*/
   const jsonCek = async () => {
     let queue = await FileSystem.readAsStringAsync(
       FileSystem.documentDirectory + `offline_stored.json`
@@ -104,17 +84,90 @@ function transcriptScreen({ firebase }) {
   };
   const createHTML = () => {
     setUploading(true);
-    let baseHTML =
-      '<div style="padding-top: 10px;"> \
-    <div style="display: inline-block; vertical-align: middle;"><img style="border-style: solid;" src="PHOTOxx" alt="img" width="170" height="200" /></div> \
-    <div style="display: inline-flex; flex-direction: column; padding: 15px;"> \
-    <div style="padding-bottom: 10px;">Adı : NAMExx</div> \
-    <div style="padding-bottom: 10px;">Soyadı : SURNAMExx</div> \
-    <div style="padding-bottom: 10px;">Numarası : NUMBERxx</div> \
-    </div> \
-    </div>  ';
-    let printHTML = "";
-    for (let index = 0; index < scanCounter + 1; index++) {}
+    const hasSingle = transcript.length % 2 == 0 ? false : true;
+    let printHTML = "<div>";
+    const maxIndex = hasSingle ? transcript.length - 1 : transcript.length;
+    for (let index = 0; index < maxIndex; index++) {
+      if (index % 2 == 0) {
+        printHTML +=
+          '<div style="display: flex;flex-direction: row;justify-content: space-around;">';
+      }
+      printHTML +=
+        "<div>\
+        <div>\
+        <div>\
+        <h3>" +
+        transcript[index].semester +
+        ' .Semester</h3> \
+      </div> \
+      </div> \
+      <div> \
+      <table style="margin: 0; width:250pt;border: 1px solid black"> \
+      <thead> \
+      <tr> \
+      <td style="padding-left:10px"><strong>Ders Adı</strong></td> \
+      <td style="text-align: center;"><strong>Başarı Notu</strong></td> \
+      </tr> \
+      </thead> \
+      </tbody> ';
+      transcript[index].lectures.forEach((item) => {
+        printHTML +=
+          '<tr> \
+        <td style="width:75%;border: 1px solid black;padding-left:4px">' +
+          item.lecture +
+          '</td>\
+        <td style="width:25%; text-align: center;vertical-align: middle;border: 1px solid black">' +
+          item.grade +
+          "</td> \
+        </tr>";
+      });
+      printHTML += "</tbody> \
+      </table> \
+      </div> \
+      </div> ";
+
+      if (index % 2 == 1) {
+        printHTML += "</div>";
+      }
+    }
+    printHTML += "</div>";
+    /*transcript.forEach((element) => {
+      if (counter % 2 == 0) {
+        printHTML +=
+          '<div style="display: flex;flex-direction: column-reverse;">';
+      }
+      printHTML +=
+        "<div>\
+        <div>\
+        <h3>" +
+        element.semester +
+        ' .Semester</h3> \
+      </div> \
+      </div> \
+      <table style="margin: 0; width:45%"> \
+      <thead> \
+      <tr> \
+      <td><strong>Ders Adı</strong></td> \
+      <td><strong>Başarı Notu</strong></td> \
+      </tr> \
+      </thead> \
+      </tbody> ';
+      element.lectures.forEach((item) => {
+        printHTML +=
+          '<tr> \
+        <td style="width:75%">' +
+          item.lecture +
+          '</td>\
+        <td style="width:25%">' +
+          item.grade +
+          "</td> \
+        </tr>";
+      });
+      printHTML += "</tbody> \
+      </table> \
+      </div>";
+      counter++;
+    });*/
     createPDF(printHTML);
   };
   const parseText = async (response) => {
