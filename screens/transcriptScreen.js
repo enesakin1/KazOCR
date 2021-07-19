@@ -86,11 +86,10 @@ function transcriptScreen({ firebase }) {
     setUploading(true);
     const hasSingle = transcript.length % 2 == 0 ? false : true;
     let printHTML = "<div>";
-    const maxIndex = hasSingle ? transcript.length - 1 : transcript.length;
-    for (let index = 0; index < maxIndex; index++) {
+    for (let index = 0; index < transcript.length; index++) {
       if (index % 2 == 0) {
         printHTML +=
-          '<div style="display: flex;flex-direction: row;justify-content: space-around;">';
+          '<div style="display: flex;flex-direction: row;justify-content: space-around;" >';
       }
       printHTML +=
         "<div>\
@@ -98,7 +97,7 @@ function transcriptScreen({ firebase }) {
         <div>\
         <h3>" +
         transcript[index].semester +
-        ' .Semester</h3> \
+        ' .Yarıyıl</h3> \
       </div> \
       </div> \
       <div> \
@@ -130,44 +129,10 @@ function transcriptScreen({ firebase }) {
         printHTML += "</div>";
       }
     }
+    if (hasSingle) {
+      printHTML += "</div>";
+    }
     printHTML += "</div>";
-    /*transcript.forEach((element) => {
-      if (counter % 2 == 0) {
-        printHTML +=
-          '<div style="display: flex;flex-direction: column-reverse;">';
-      }
-      printHTML +=
-        "<div>\
-        <div>\
-        <h3>" +
-        element.semester +
-        ' .Semester</h3> \
-      </div> \
-      </div> \
-      <table style="margin: 0; width:45%"> \
-      <thead> \
-      <tr> \
-      <td><strong>Ders Adı</strong></td> \
-      <td><strong>Başarı Notu</strong></td> \
-      </tr> \
-      </thead> \
-      </tbody> ';
-      element.lectures.forEach((item) => {
-        printHTML +=
-          '<tr> \
-        <td style="width:75%">' +
-          item.lecture +
-          '</td>\
-        <td style="width:25%">' +
-          item.grade +
-          "</td> \
-        </tr>";
-      });
-      printHTML += "</tbody> \
-      </table> \
-      </div>";
-      counter++;
-    });*/
     createPDF(printHTML);
   };
   const parseText = async (response) => {
@@ -567,6 +532,32 @@ function transcriptScreen({ firebase }) {
                 {item.semester} .Semester
               </Text>
             </View>
+            <Grid>
+              <Col size={50}>
+                <Row style={styles.cell}>
+                  <Text
+                    style={{
+                      alignSelf: "center",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Lecture Name
+                  </Text>
+                </Row>
+              </Col>
+              <Col size={15}>
+                <Row style={styles.cell}>
+                  <Text
+                    style={{
+                      alignSelf: "center",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Grade
+                  </Text>
+                </Row>
+              </Col>
+            </Grid>
             <FlatList
               data={item.lectures}
               renderItem={({ item: item2 }) => (
