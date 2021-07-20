@@ -1,7 +1,6 @@
 import React from "react";
 import { withFirebaseHOC } from "../config";
 import UserPermissions from "../utilities/UserPermissions";
-import { StyleSheet, View, Text } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 
 class Initial extends React.Component {

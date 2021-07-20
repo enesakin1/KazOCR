@@ -1,15 +1,11 @@
 import { StatusBar } from "expo-status-bar";
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   View,
-  Alert,
-  ScrollView,
   Modal,
   Text,
-  TouchableHighlight,
   TouchableOpacity,
-  TextComponent,
   Image,
   ActivityIndicator,
   FlatList,
@@ -21,19 +17,10 @@ import { Button, Input } from "react-native-elements";
 import * as ImagePicker from "expo-image-picker";
 import { withFirebaseHOC } from "../config";
 import * as FileSystem from "expo-file-system";
-import {
-  defaultActions,
-  RichEditor,
-  RichToolbar,
-} from "react-native-pell-rich-editor";
 import * as Print from "expo-print";
 import * as MediaLibrary from "expo-media-library";
-import Loading from "./loadingScreen";
-import * as SplashScreen from "expo-splash-screen";
 import * as Sharing from "expo-sharing";
 import * as ImageManipulator from "expo-image-manipulator";
-import { object } from "yup";
-import { cos } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { TextInput } from "react-native";
 
@@ -53,20 +40,6 @@ function cardScreen({ firebase }) {
   const [textLength, setTextLength] = useState(0);
   const [bothloading, setBothloading] = useState({ uploading, textLength });
 
-  /*useEffect(() => {
-    if (typeof state.text !== "undefined" && state.text.length > 0) {
-      setTextLength(state.text.length);
-    }
-  }, [state.text]);
-  useEffect(() => {
-    setBothloading((prev) => {
-      return uploading !== prev.uploading && textLength !== prev.textLength
-        ? { uploading, textLength }
-        : prev;
-    });
-  }, [uploading, textLength]);
-  useEffect(() => {
-  }, [bothloading]);*/
   const deleteCard = async (id) => {
     setUploading(true);
     let counter = scanCounter - 1;

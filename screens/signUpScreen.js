@@ -8,7 +8,6 @@ import {
   View,
   TouchableOpacity,
   Dimensions,
-  Image,
   ImageBackground,
   KeyboardAvoidingView,
   ScrollView,

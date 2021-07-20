@@ -1,20 +1,14 @@
 import { StatusBar } from "expo-status-bar";
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   View,
-  Alert,
-  ScrollView,
   Modal,
   Text,
-  TouchableHighlight,
   TouchableOpacity,
-  TextComponent,
-  Image,
   ActivityIndicator,
   FlatList,
   ToastAndroid,
-  SectionList,
   SafeAreaView,
   ImageBackground,
 } from "react-native";
@@ -22,23 +16,11 @@ import { Button, Input } from "react-native-elements";
 import * as ImagePicker from "expo-image-picker";
 import { withFirebaseHOC } from "../config";
 import * as FileSystem from "expo-file-system";
-import {
-  defaultActions,
-  RichEditor,
-  RichToolbar,
-} from "react-native-pell-rich-editor";
 import * as Print from "expo-print";
 import * as MediaLibrary from "expo-media-library";
-import Loading from "./loadingScreen";
-import * as SplashScreen from "expo-splash-screen";
 import * as Sharing from "expo-sharing";
-import * as ImageManipulator from "expo-image-manipulator";
-import { object } from "yup";
-import { cos } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { TextInput } from "react-native";
-import { Share } from "react-native";
-import { DataTable } from "react-native-paper";
 import { Col, Row, Grid } from "react-native-easy-grid";
 
 function transcriptScreen({ firebase }) {
@@ -53,7 +35,6 @@ function transcriptScreen({ firebase }) {
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [textLength, setTextLength] = useState(0);
 
   const deleteLecture = (index, id) => {
     let temp = [...transcript];

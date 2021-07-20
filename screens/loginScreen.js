@@ -8,10 +8,7 @@ import {
   View,
   TouchableOpacity,
   Dimensions,
-  Image,
   ImageBackground,
-  KeyboardAvoidingView,
-  ScrollView,
 } from "react-native";
 import { Button, Input } from "react-native-elements";
 import { withFirebaseHOC } from "../config";

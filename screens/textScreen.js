@@ -1,27 +1,16 @@
 import { StatusBar } from "expo-status-bar";
-import React, {
-  useRef,
-  useState,
-  useEffect,
-  useCallback,
-  version,
-} from "react";
+import React, { useRef, useState } from "react";
 import {
   StyleSheet,
   View,
   Alert,
-  ScrollView,
   Modal,
   Text,
-  TouchableHighlight,
   TouchableOpacity,
   ImageBackground,
-  Dimensions,
   SafeAreaView,
   ToastAndroid,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { Button, Input } from "react-native-elements";
 import * as ImagePicker from "expo-image-picker";
@@ -34,13 +23,10 @@ import {
 } from "react-native-pell-rich-editor";
 import * as Print from "expo-print";
 import * as MediaLibrary from "expo-media-library";
-import Loading from "./loadingScreen";
-import * as SplashScreen from "expo-splash-screen";
 import * as Sharing from "expo-sharing";
 import { Ionicons } from "@expo/vector-icons";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
-const { width, height } = Dimensions.get("window");
 function textScreen({ firebase }) {
   const [state, setState] = useState({
     image: "",
