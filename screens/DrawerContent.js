@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, ImageBackground } from "react-native";
+import { View, StyleSheet, ImageBackground, SafeAreaView } from "react-native";
 import { Drawer } from "react-native-paper";
 import { DrawerContentScrollView, DrawerItem } from "@react-navigation/drawer";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,11 +10,67 @@ function DrawerContent(props) {
     await props.firebase.signOut();
   };
   return (
-    <View style={{ flex: 1, backgroundColor: "#ECF1F4" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#ECF1F4" }}>
       <DrawerContentScrollView {...props}>
         <View style={styles.drawerContent}>
           <View style={styles.userInfoSection}>
-            <View style={{ flexDirection: "row", marginTop: 15 }}></View>
+            <View
+              style={{
+                marginTop: 15,
+              }}
+            >
+              <ImageBackground
+                source={require("../assets/icon1.png")}
+                style={styles.logo}
+                borderRadius={10}
+              />
+            </View>
+            <Drawer.Section style={styles.drawerSection}>
+              <DrawerItem
+                icon={({ color, size }) => (
+                  <Ionicons name="home-outline" color={color} size={size} />
+                )}
+                label="Home"
+                labelStyle={{ fontSize: 16 }}
+                onPress={() => {
+                  props.navigation.navigate("Main");
+                }}
+              />
+              <DrawerItem
+                icon={({ color, size }) => (
+                  <Ionicons
+                    name="document-text-outline"
+                    color={color}
+                    size={size}
+                  />
+                )}
+                label="Document"
+                labelStyle={{ fontSize: 16 }}
+                onPress={() => {
+                  props.navigation.navigate("Text");
+                }}
+              />
+              <DrawerItem
+                icon={({ color, size }) => (
+                  <Ionicons name="ios-person" color={color} size={size} />
+                )}
+                label="Student ID Card"
+                labelStyle={{ fontSize: 16 }}
+                onPress={() => {
+                  props.navigation.navigate("Card");
+                }}
+              />
+              <DrawerItem
+                icon={({ color, size }) => (
+                  <Ionicons name="school-outline" color={color} size={size} />
+                )}
+                label="Transcript"
+                labelStyle={{ fontSize: 16 }}
+                onPress={() => {
+                  props.navigation.navigate("Transcript");
+                }}
+              />
+            </Drawer.Section>
           </View>
         </View>
       </DrawerContentScrollView>
@@ -27,7 +83,7 @@ function DrawerContent(props) {
           onPress={_signOut}
         />
       </Drawer.Section>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -52,6 +108,6 @@ const styles = StyleSheet.create({
   },
   logo: {
     flex: 1,
-    aspectRatio: 1.7,
+    aspectRatio: 1,
   },
 });

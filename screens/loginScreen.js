@@ -85,7 +85,7 @@ class loginScreen extends React.Component {
                     errorMessage={touched.email && errors.email}
                     style={styles.textInput}
                     value={values.email}
-                    placeholderTextColor="#565757"
+                    placeholderTextColor="#cdd0d4"
                     onChangeText={handleChange("email")}
                     autoCapitalize="none"
                     placeholder="E-mail"
@@ -99,7 +99,7 @@ class loginScreen extends React.Component {
                     errorMessage={touched.password && errors.password}
                     style={styles.textInput}
                     value={values.password}
-                    placeholderTextColor="#565757"
+                    placeholderTextColor="#cdd0d4"
                     onChangeText={handleChange("password")}
                     placeholder="Password"
                     secureTextEntry={passwordVisibility}

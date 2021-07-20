@@ -1,59 +1,98 @@
 import { StatusBar } from "expo-status-bar";
-import React, { useRef, useState, useEffect, useCallback } from "react";
-import { StyleSheet, View, Alert, Text } from "react-native";
-import { Button } from "react-native-elements";
-import * as ImagePicker from "expo-image-picker";
-import { withFirebaseHOC } from "../config";
-import * as FileSystem from "expo-file-system";
+import React, { useEffect } from "react";
 import {
-  defaultActions,
-  RichEditor,
-  RichToolbar,
-} from "react-native-pell-rich-editor";
-import * as Print from "expo-print";
-import * as MediaLibrary from "expo-media-library";
-import Loading from "./loadingScreen";
+  StyleSheet,
+  View,
+  ImageBackground,
+  SafeAreaView,
+  Dimensions,
+  Image,
+} from "react-native";
+import { Button } from "react-native-elements";
+import { withFirebaseHOC } from "../config";
 import * as SplashScreen from "expo-splash-screen";
+import { Ionicons } from "@expo/vector-icons";
+
+const { width, height } = Dimensions.get("window");
 
 function mainScreen({ navigation }) {
   useEffect(() => {
     async function prepare() {
       await SplashScreen.hideAsync();
     }
-
     prepare();
   }, []);
   const navigateScreen = async (screen) => {
     navigation.navigate(screen);
   };
   return (
-    <View style={styles.container}>
-      <Button
-        onPress={() => {
-          navigateScreen("Text");
-        }}
-        title="Text"
-        color="#1985bc"
-        style={styles.buttons}
-      />
-      <Button
-        onPress={() => {
-          navigateScreen("Card");
-        }}
-        title="Student ID Card"
-        color="#1985bc"
-        style={styles.buttons}
-      />
-      <Button
-        onPress={() => {
-          navigateScreen("Transcript");
-        }}
-        title="Transcript"
-        color="#1985bc"
-        style={styles.buttons}
-      />
+    <SafeAreaView style={styles.container}>
+      <ImageBackground
+        source={require("../assets/background.jpg")}
+        style={{ flex: 1, width: "100%" }}
+        blurRadius={1}
+      >
+        <View
+          style={{
+            flex: 0.5,
+            marginTop: 20,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Image
+            source={require("../assets/iconwithname.png")}
+            style={{
+              width: width * (2 / 3),
+              height: height * (2 / 5),
+              resizeMode: "contain",
+            }}
+          />
+        </View>
+        <View
+          style={{ flex: 0.5, justifyContent: "center", alignItems: "center" }}
+        >
+          <Button
+            titleStyle={styles.buttonTitle}
+            icon={() => (
+              <Ionicons
+                name="document-text-outline"
+                color={"white"}
+                size={24}
+              />
+            )}
+            onPress={() => {
+              navigateScreen("Text");
+            }}
+            title="Document"
+            buttonStyle={styles.buttons}
+          />
+          <Button
+            titleStyle={styles.buttonTitle}
+            icon={() => (
+              <Ionicons name="ios-person" color={"white"} size={24} />
+            )}
+            onPress={() => {
+              navigateScreen("Card");
+            }}
+            title="Student ID Card"
+            buttonStyle={styles.buttons}
+          />
+          <Button
+            titleStyle={styles.buttonTitle}
+            icon={() => (
+              <Ionicons name="school-outline" color={"white"} size={24} />
+            )}
+            onPress={() => {
+              navigateScreen("Transcript");
+            }}
+            title="Transcript"
+            buttonStyle={styles.buttons}
+          />
+        </View>
+      </ImageBackground>
       <StatusBar hidden={true} />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -66,6 +105,13 @@ const styles = StyleSheet.create({
     alignContent: "center",
   },
   buttons: {
-    width: 15,
+    margin: 20,
+    borderRadius: 10,
+    backgroundColor: "#3a3c3d",
+    width: (width * 3) / 4,
+    height: height / 12,
+  },
+  buttonTitle: {
+    marginLeft: 10,
   },
 });

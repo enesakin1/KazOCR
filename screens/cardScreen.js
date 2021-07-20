@@ -14,6 +14,8 @@ import {
   ActivityIndicator,
   FlatList,
   ToastAndroid,
+  ImageBackground,
+  SafeAreaView,
 } from "react-native";
 import { Button, Input } from "react-native-elements";
 import * as ImagePicker from "expo-image-picker";
@@ -34,7 +36,6 @@ import { object } from "yup";
 import { cos } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { TextInput } from "react-native";
-import { Share } from "react-native";
 
 function cardScreen({ firebase }) {
   const defaultPhotoURL = "gs://kazocr-50026.appspot.com/defaultPhoto.png";
@@ -77,7 +78,7 @@ function cardScreen({ firebase }) {
     setPeople(temp);
     setUploading(false);
   };
-  const createHTML = () => {
+  const createHTML = (saveWay) => {
     setUploading(true);
     let baseHTML =
       '<div style="padding-top: 10px;"> \
@@ -95,7 +96,7 @@ function cardScreen({ firebase }) {
       printHTML = printHTML.replace("SURNAMExx", people[index].surname);
       printHTML = printHTML.replace("NUMBERxx", people[index].number);
     }
-    createPDF(printHTML);
+    createPDF(printHTML, saveWay);
   };
   const parseText = async (response, userdata) => {
     if (typeof response.responses[0].textAnnotations === "undefined") {
@@ -213,7 +214,7 @@ function cardScreen({ firebase }) {
   const analyzeCard = async (response, imageInfo) => {
     cropImage(response, imageInfo);
   };
-  const createPDF = async (html) => {
+  const createPDF = async (html, saveWay) => {
     try {
       let fileInfo = await Print.printToFileAsync({
         html: html,
@@ -221,21 +222,36 @@ function cardScreen({ firebase }) {
         width: 612,
         base64: false,
       });
-      let pdfName =
-        fileInfo.uri.slice(0, fileInfo.uri.lastIndexOf("Print/")) +
-        filename +
-        ".pdf";
-      await FileSystem.moveAsync({
-        from: fileInfo.uri,
-        to: pdfName,
-      });
       setUploading(false);
-      let result = Sharing.shareAsync(pdfName);
-      if (result.action === Share.sharedAction) {
-        console.log("shared");
+      if (saveWay === "Share") {
+        let pdfName =
+          fileInfo.uri.slice(0, fileInfo.uri.lastIndexOf("Print/")) +
+          filename +
+          ".pdf";
+        await FileSystem.moveAsync({
+          from: fileInfo.uri,
+          to: pdfName,
+        });
+        const result = await Sharing.shareAsync(pdfName);
+        if (result.action === Sharing.sharedAction) {
+          ToastAndroid.show("Successful shared!", ToastAndroid.LONG);
+        }
+      } else if (saveWay === "Save") {
+        const asset = await MediaLibrary.createAssetAsync(fileInfo.uri);
+        const album = await MediaLibrary.getAlbumAsync("KazOCR");
+        if (album == null) {
+          await MediaLibrary.createAlbumAsync("KazOCR", asset, false);
+        } else {
+          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+        }
+        ToastAndroid.show(
+          "Successful saved! (Check KazOCR folder)",
+          ToastAndroid.LONG
+        );
       }
-    } catch (error) {
-      console.log(error);
+    } catch (err) {
+      console.log("Save err: ", err);
+      setUploading(false);
     }
   };
 
@@ -291,6 +307,8 @@ function cardScreen({ firebase }) {
         padding: 10,
         borderBottomWidth: 1,
         height: 200,
+        backgroundColor: "#f2f2f2",
+        marginTop: 5,
       }}
     >
       <Ionicons
@@ -429,33 +447,38 @@ function cardScreen({ firebase }) {
     </View>
   );
   return (
-    <View style={styles.container}>
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={saveModalVisible}
-        onShow={() => {
-          setFilename("");
-          setErrorText("");
-        }}
-        onRequestClose={() => {
-          setSaveModalVisible(!saveModalVisible);
-        }}
+    <SafeAreaView style={styles.container}>
+      <ImageBackground
+        source={require("../assets/background.jpg")}
+        style={{ flex: 1, width: "100%" }}
+        blurRadius={1}
       >
-        <View style={styles.centeredView}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalText}>Enter filename</Text>
-
-            <Input
-              onChangeText={(value) => setFilename(value)}
-              placeholder="Filename..."
-              style={{ backgroundColor: "white" }}
-            />
-            <Text style={{ color: "red", paddingBottom: 10 }}>{errorText}</Text>
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={saveModalVisible}
+          onShow={() => {
+            setFilename("");
+            setErrorText("");
+          }}
+          onRequestClose={() => {
+            setSaveModalVisible(!saveModalVisible);
+          }}
+        >
+          <View style={styles.saveModalView}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.modalText}>Enter filename</Text>
+              <Input
+                onChangeText={(value) => setFilename(value)}
+                placeholder="Filename..."
+                style={{ backgroundColor: "white" }}
+              />
+              <Text style={styles.errorText}>{errorText}</Text>
+            </View>
             <View style={styles.modalButtonsContainer}>
               <Button
                 title="Confirm"
-                style={{ margin: 20 }}
+                buttonStyle={styles.modalButtonStyle}
                 onPress={() => {
                   if (people.length == 0) {
                     setErrorText("Please scan at least one card");
@@ -464,23 +487,21 @@ function cardScreen({ firebase }) {
                   } else {
                     setErrorText("");
                     setSaveModalVisible(!saveModalVisible);
-                    createHTML();
+                    createHTML("Share");
                   }
                 }}
               />
               <Button
                 title="Cancel"
-                style={{ alignSelf: "flex-end" }}
+                buttonStyle={styles.modalButtonStyle}
                 onPress={() => {
                   setSaveModalVisible(!saveModalVisible);
                 }}
               />
             </View>
           </View>
-        </View>
-      </Modal>
-      <Modal animationType="fade" transparent={true} visible={uploading}>
-        <View style={styles.centeredView}>
+        </Modal>
+        <Modal animationType="fade" transparent={true} visible={uploading}>
           <View style={styles.modalView}>
             <View
               style={{
@@ -489,27 +510,25 @@ function cardScreen({ firebase }) {
                 flexDirection: "row",
               }}
             >
-              <Text>Loading </Text>
+              <Text style={{ fontSize: 14 }}>Loading </Text>
               <ActivityIndicator color="black" />
             </View>
           </View>
-        </View>
-      </Modal>
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={addModalVisible}
-        onRequestClose={() => {
-          setAddModalVisible(!addModalVisible);
-        }}
-      >
-        <View style={styles.centeredView}>
-          <View style={styles.modalView}>
+        </Modal>
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={addModalVisible}
+          onRequestClose={() => {
+            setAddModalVisible(!addModalVisible);
+          }}
+        >
+          <View style={styles.scanModalView}>
             <Text style={styles.modalText}>Choose From</Text>
             <View style={styles.modalButtonsContainer}>
               <Button
                 title="Media Library"
-                style={{ margin: 20 }}
+                buttonStyle={styles.modalButtonStyle}
                 onPress={() => {
                   setAddModalVisible(!addModalVisible);
                   pickImage();
@@ -517,106 +536,121 @@ function cardScreen({ firebase }) {
               />
               <Button
                 title="Camera"
-                style={{ alignSelf: "flex-end" }}
+                buttonStyle={styles.modalButtonStyle}
                 onPress={() => {
                   setAddModalVisible(!addModalVisible);
                   takePhoto();
                 }}
               />
-              <Button
-                title="Cancel"
-                style={{ alignSelf: "flex-end" }}
-                onPress={() => {
-                  setAddModalVisible(!addModalVisible);
-                }}
-              />
             </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
-      <Button
-        onPress={() => {
-          setSaveModalVisible(true);
-        }}
-        title="Save"
-        color="#1985bc"
-      />
-      <Button
-        onPress={() => {
-          console.log(people);
-        }}
-        title="bilgi"
-        color="#1985bc"
-      />
-      <TouchableOpacity
-        onPress={() => {
-          setAddModalVisible(true);
-        }}
-      >
         <View
           style={{
+            flex: 0.07,
+            margin: 10,
+            backgroundColor: "#fcfcff",
+            borderBottomWidth: 0.8,
             flexDirection: "row",
-            padding: 10,
-            borderBottomWidth: 1,
-            height: 200,
+            justifyContent: "flex-end",
+            paddingRight: 20,
+            alignItems: "center",
           }}
         >
-          <Ionicons
-            name="add-circle-outline"
-            size={60}
-            color="green"
-            style={{
-              position: "absolute",
-              bottom: 0,
-              right: 0,
+          <TouchableOpacity
+            onPress={() => {
+              if (people.length == 0) {
+                ToastAndroid.show("Scan at least 1 card", ToastAndroid.SHORT);
+                return;
+              }
+              createHTML("Save");
             }}
-          />
-          <Image
-            source={require("../assets/defaultPhoto.png")}
-            style={{ width: 125, height: 166, borderWidth: 1 }}
-          />
-          <View
-            style={{
-              flexDirection: "column",
-              justifyContent: "center",
-              padding: 10,
+            style={{ marginLeft: 10 }}
+          >
+            <Ionicons name="save-sharp" color={"#3a3c3d"} size={32} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              setSaveModalVisible(true);
+            }}
+            style={{ marginLeft: 15 }}
+          >
+            <Ionicons name="share-social" color={"#3a3c3d"} size={32} />
+          </TouchableOpacity>
+        </View>
+        <View style={{ flex: 0.9, marginRight: 10, marginLeft: 10 }}>
+          <TouchableOpacity
+            onPress={() => {
+              setAddModalVisible(true);
             }}
           >
-            <Text
+            <View
               style={{
-                paddingBottom: 10,
+                flexDirection: "row",
+                padding: 10,
+                borderBottomWidth: 1,
+                height: 200,
+                backgroundColor: "#f2f2f2",
               }}
             >
-              Adı :{" "}
-            </Text>
+              <Ionicons
+                name="add-circle-outline"
+                size={60}
+                color="green"
+                style={{
+                  position: "absolute",
+                  bottom: 0,
+                  right: 0,
+                }}
+              />
+              <Image
+                source={require("../assets/defaultPhoto.png")}
+                style={{ width: 125, height: 166, borderWidth: 1 }}
+              />
+              <View
+                style={{
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  padding: 10,
+                }}
+              >
+                <Text
+                  style={{
+                    paddingBottom: 10,
+                  }}
+                >
+                  Adı :{" "}
+                </Text>
 
-            <Text
-              style={{
-                paddingBottom: 10,
-              }}
-            >
-              Soyadı :{" "}
-            </Text>
+                <Text
+                  style={{
+                    paddingBottom: 10,
+                  }}
+                >
+                  Soyadı :{" "}
+                </Text>
 
-            <Text
-              style={{
-                paddingBottom: 10,
-              }}
-            >
-              Numara :{" "}
-            </Text>
-          </View>
+                <Text
+                  style={{
+                    paddingBottom: 10,
+                  }}
+                >
+                  Numara :{" "}
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+          <FlatList
+            data={people}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id.toString()}
+            style={{ flex: 1 }}
+          ></FlatList>
         </View>
-      </TouchableOpacity>
-      <FlatList
-        data={people}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
-        style={{ flex: 1 }}
-      ></FlatList>
+      </ImageBackground>
       <StatusBar hidden={true} />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -628,18 +662,42 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     justifyContent: "flex-start",
   },
-  enteredView: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 22,
-  },
   modalView: {
+    flex: 0.05,
     margin: 20,
     backgroundColor: "white",
     borderRadius: 20,
     padding: 35,
-    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  scanModalView: {
+    flex: 0.15,
+    margin: 20,
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 35,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  saveModalView: {
+    flex: 0.3,
+    margin: 20,
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 35,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -657,9 +715,23 @@ const styles = StyleSheet.create({
   modalText: {
     marginBottom: 15,
     textAlign: "center",
+    fontWeight: "bold",
+    fontSize: 17,
   },
   modalButtonsContainer: {
     flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalButtonStyle: {
+    borderRadius: 10,
+    backgroundColor: "#3a3c3d",
+    marginLeft: 10,
   },
   /***** */
+  errorText: {
+    color: "red",
+    paddingBottom: 15,
+    alignSelf: "center",
+  },
 });

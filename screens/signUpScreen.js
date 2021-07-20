@@ -102,7 +102,7 @@ class signUpScreen extends React.Component {
                         errorMessage={touched.email && errors.email}
                         style={styles.textInput}
                         value={values.email}
-                        placeholderTextColor="#565757"
+                        placeholderTextColor="#cdd0d4"
                         onChangeText={handleChange("email")}
                         autoCapitalize="none"
                         placeholder="Enter email"
@@ -116,7 +116,7 @@ class signUpScreen extends React.Component {
                         style={styles.textInput}
                         errorMessage={touched.username && errors.username}
                         value={values.username}
-                        placeholderTextColor="#565757"
+                        placeholderTextColor="#cdd0d4"
                         onChangeText={handleChange("username")}
                         placeholder="Enter username"
                         autoCapitalize="none"
@@ -134,7 +134,7 @@ class signUpScreen extends React.Component {
                         errorMessage={touched.password && errors.password}
                         style={styles.textInput}
                         value={values.password}
-                        placeholderTextColor="#565757"
+                        placeholderTextColor="#cdd0d4"
                         onChangeText={handleChange("password")}
                         placeholder="Enter password"
                         secureTextEntry={passwordVisibility}

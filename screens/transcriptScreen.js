@@ -15,6 +15,8 @@ import {
   FlatList,
   ToastAndroid,
   SectionList,
+  SafeAreaView,
+  ImageBackground,
 } from "react-native";
 import { Button, Input } from "react-native-elements";
 import * as ImagePicker from "expo-image-picker";
@@ -52,13 +54,7 @@ function transcriptScreen({ firebase }) {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [textLength, setTextLength] = useState(0);
-  const jsonCek = async () => {
-    let queue = await FileSystem.readAsStringAsync(
-      FileSystem.documentDirectory + `offline_stored.json`
-    );
-    let data = JSON.parse(queue);
-    parseText(data);
-  };
+
   const deleteLecture = (index, id) => {
     let temp = [...transcript];
     let lectureIndex = 0;
@@ -82,7 +78,7 @@ function transcriptScreen({ firebase }) {
     setLastLecture(counter);
     setTranscript(temp);
   };
-  const createHTML = () => {
+  const createHTML = (saveWay) => {
     setUploading(true);
     const hasSingle = transcript.length % 2 == 0 ? false : true;
     let printHTML = "<div>";
@@ -133,7 +129,7 @@ function transcriptScreen({ firebase }) {
       printHTML += "</div>";
     }
     printHTML += "</div>";
-    createPDF(printHTML);
+    createPDF(printHTML, saveWay);
   };
   const parseText = async (response) => {
     if (typeof response.responses[0].textAnnotations === "undefined") {
@@ -149,12 +145,17 @@ function transcriptScreen({ firebase }) {
     let regex = /ders(.*)/gi;
     let replaced = text.replace(regex, "");
     if (replaced.length < 1) {
+      setUploading(false);
       return;
     }
     let lectureCounter = 0;
     let startSemester = replaced[0];
     const columnCount = (replaced.match(/\byar[ıi]y[ıi]l\b/gi) || []).length;
     const semesterCount = (text.match(/\byar[ıi]y[ıi]l\b/gi) || []).length;
+    if (semesterCount == 0 && columnCount == 0) {
+      setUploading(false);
+      return;
+    }
     const rowCount = semesterCount / columnCount;
     const rowSingle =
       semesterCount - rowCount * columnCount == 1 ? true : false;
@@ -239,7 +240,7 @@ function transcriptScreen({ firebase }) {
   const analyzeTranscript = async (response) => {
     parseText(response);
   };
-  const createPDF = async (html) => {
+  const createPDF = async (html, saveWay) => {
     try {
       let fileInfo = await Print.printToFileAsync({
         html: html,
@@ -247,21 +248,36 @@ function transcriptScreen({ firebase }) {
         width: 612,
         base64: false,
       });
-      let pdfName =
-        fileInfo.uri.slice(0, fileInfo.uri.lastIndexOf("Print/")) +
-        filename +
-        ".pdf";
-      await FileSystem.moveAsync({
-        from: fileInfo.uri,
-        to: pdfName,
-      });
       setUploading(false);
-      let result = Sharing.shareAsync(pdfName);
-      if (result.action === Share.sharedAction) {
-        console.log("shared");
+      if (saveWay === "Share") {
+        let pdfName =
+          fileInfo.uri.slice(0, fileInfo.uri.lastIndexOf("Print/")) +
+          filename +
+          ".pdf";
+        await FileSystem.moveAsync({
+          from: fileInfo.uri,
+          to: pdfName,
+        });
+        const result = await Sharing.shareAsync(pdfName);
+        if (result.action === Sharing.sharedAction) {
+          ToastAndroid.show("Successful shared!", ToastAndroid.LONG);
+        }
+      } else if (saveWay === "Save") {
+        const asset = await MediaLibrary.createAssetAsync(fileInfo.uri);
+        const album = await MediaLibrary.getAlbumAsync("KazOCR");
+        if (album == null) {
+          await MediaLibrary.createAlbumAsync("KazOCR", asset, false);
+        } else {
+          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+        }
+        ToastAndroid.show(
+          "Successful saved! (Check KazOCR folder)",
+          ToastAndroid.LONG
+        );
       }
-    } catch (error) {
-      console.log(error);
+    } catch (err) {
+      console.log("Save err: ", err);
+      setUploading(false);
     }
   };
 
@@ -304,33 +320,38 @@ function transcriptScreen({ firebase }) {
   };
 
   return (
-    <View style={styles.container}>
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={saveModalVisible}
-        onShow={() => {
-          setFilename("");
-          setErrorText("");
-        }}
-        onRequestClose={() => {
-          setSaveModalVisible(!saveModalVisible);
-        }}
+    <SafeAreaView style={styles.container}>
+      <ImageBackground
+        source={require("../assets/background.jpg")}
+        style={{ flex: 1, width: "100%" }}
+        blurRadius={1}
       >
-        <View style={styles.centeredView}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalText}>Enter filename</Text>
-
-            <Input
-              onChangeText={(value) => setFilename(value)}
-              placeholder="Filename..."
-              style={{ backgroundColor: "white" }}
-            />
-            <Text style={{ color: "red", paddingBottom: 10 }}>{errorText}</Text>
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={saveModalVisible}
+          onShow={() => {
+            setFilename("");
+            setErrorText("");
+          }}
+          onRequestClose={() => {
+            setSaveModalVisible(!saveModalVisible);
+          }}
+        >
+          <View style={styles.saveModalView}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.modalText}>Enter filename</Text>
+              <Input
+                onChangeText={(value) => setFilename(value)}
+                placeholder="Filename..."
+                style={{ backgroundColor: "white" }}
+              />
+              <Text style={styles.errorText}>{errorText}</Text>
+            </View>
             <View style={styles.modalButtonsContainer}>
               <Button
                 title="Confirm"
-                style={{ margin: 20 }}
+                buttonStyle={styles.modalButtonStyle}
                 onPress={() => {
                   if (transcript.length == 0) {
                     setErrorText("Please scan a transcript first");
@@ -339,23 +360,21 @@ function transcriptScreen({ firebase }) {
                   } else {
                     setErrorText("");
                     setSaveModalVisible(!saveModalVisible);
-                    createHTML();
+                    createHTML("Share");
                   }
                 }}
               />
               <Button
                 title="Cancel"
-                style={{ alignSelf: "flex-end" }}
+                buttonStyle={styles.modalButtonStyle}
                 onPress={() => {
                   setSaveModalVisible(!saveModalVisible);
                 }}
               />
             </View>
           </View>
-        </View>
-      </Modal>
-      <Modal animationType="fade" transparent={true} visible={uploading}>
-        <View style={styles.centeredView}>
+        </Modal>
+        <Modal animationType="fade" transparent={true} visible={uploading}>
           <View style={styles.modalView}>
             <View
               style={{
@@ -364,27 +383,25 @@ function transcriptScreen({ firebase }) {
                 flexDirection: "row",
               }}
             >
-              <Text>Loading </Text>
+              <Text style={{ fontSize: 14 }}>Loading </Text>
               <ActivityIndicator color="black" />
             </View>
           </View>
-        </View>
-      </Modal>
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={addModalVisible}
-        onRequestClose={() => {
-          setAddModalVisible(!addModalVisible);
-        }}
-      >
-        <View style={styles.centeredView}>
-          <View style={styles.modalView}>
+        </Modal>
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={addModalVisible}
+          onRequestClose={() => {
+            setAddModalVisible(!addModalVisible);
+          }}
+        >
+          <View style={styles.scanModalView}>
             <Text style={styles.modalText}>Choose From</Text>
             <View style={styles.modalButtonsContainer}>
               <Button
                 title="Media Library"
-                style={{ margin: 20 }}
+                buttonStyle={styles.modalButtonStyle}
                 onPress={() => {
                   setAddModalVisible(!addModalVisible);
                   pickImage();
@@ -392,39 +409,30 @@ function transcriptScreen({ firebase }) {
               />
               <Button
                 title="Camera"
-                style={{ alignSelf: "flex-end" }}
+                buttonStyle={styles.modalButtonStyle}
                 onPress={() => {
                   setAddModalVisible(!addModalVisible);
                   takePhoto();
                 }}
               />
-              <Button
-                title="Cancel"
-                style={{ alignSelf: "flex-end" }}
-                onPress={() => {
-                  setAddModalVisible(!addModalVisible);
-                }}
-              />
             </View>
           </View>
-        </View>
-      </Modal>
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={addLectureModalVisible}
-        onShow={() => {
-          setLecture("");
-          setGrade("");
-          setSemester("");
-          setErrorText("");
-        }}
-        onRequestClose={() => {
-          setAddLectureModalVisible(!addLectureModalVisible);
-        }}
-      >
-        <View style={styles.centeredView}>
-          <View style={styles.modalView}>
+        </Modal>
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={addLectureModalVisible}
+          onShow={() => {
+            setLecture("");
+            setGrade("");
+            setSemester("");
+            setErrorText("");
+          }}
+          onRequestClose={() => {
+            setAddLectureModalVisible(!addLectureModalVisible);
+          }}
+        >
+          <View style={styles.addLecturModalView}>
             <Text style={styles.modalText}>Add Lecture</Text>
 
             <Input
@@ -445,11 +453,11 @@ function transcriptScreen({ firebase }) {
               placeholder="Grade"
               style={{ backgroundColor: "white" }}
             />
-            <Text style={{ color: "red", paddingBottom: 10 }}>{errorText}</Text>
+            <Text style={styles.errorText}>{errorText}</Text>
             <View style={styles.modalButtonsContainer}>
               <Button
                 title="Confirm"
-                style={{ margin: 20 }}
+                buttonStyle={styles.modalButtonStyle}
                 onPress={() => {
                   let semesterControl = true;
                   let index = 0;
@@ -480,189 +488,244 @@ function transcriptScreen({ firebase }) {
               />
               <Button
                 title="Cancel"
-                style={{ alignSelf: "flex-end" }}
+                buttonStyle={styles.modalButtonStyle}
                 onPress={() => {
                   setAddLectureModalVisible(!addLectureModalVisible);
                 }}
               />
             </View>
           </View>
+        </Modal>
+        <View
+          style={{
+            flex: 0.09,
+            margin: 10,
+            backgroundColor: "#fcfcff",
+            borderBottomWidth: 0.8,
+            flexDirection: "row",
+            justifyContent: "flex-end",
+            paddingRight: 20,
+            alignItems: "center",
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              padding: 10,
+              flex: 0.8,
+            }}
+          >
+            <TouchableOpacity
+              onPress={() => {
+                if (transcript.length == 0) {
+                  ToastAndroid.show(
+                    "Scan least 1 transcript",
+                    ToastAndroid.SHORT
+                  );
+                  return;
+                }
+                createHTML("Save");
+              }}
+              style={{ marginLeft: 10 }}
+            >
+              <Ionicons name="save-sharp" color={"#3a3c3d"} size={32} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                setSaveModalVisible(true);
+              }}
+              style={{ marginLeft: 15 }}
+            >
+              <Ionicons name="share-social" color={"#3a3c3d"} size={32} />
+            </TouchableOpacity>
+          </View>
+          <View
+            style={{
+              flex: 1.1,
+              alignItems: "flex-start",
+              justifyContent: "center",
+              flexDirection: "row",
+            }}
+          >
+            <Button
+              icon={() => (
+                <Ionicons name="book-outline" color={"white"} size={24} />
+              )}
+              onPress={() => {
+                setAddLectureModalVisible(true);
+              }}
+              title="Add Lecture"
+              buttonStyle={{
+                borderRadius: 10,
+                backgroundColor: "#3a3c3d",
+                marginRight: 10,
+              }}
+              titleStyle={styles.titleStyle}
+            />
+            <Button
+              icon={() => (
+                <Ionicons name="scan-outline" color={"white"} size={24} />
+              )}
+              onPress={() => {
+                setAddModalVisible(true);
+              }}
+              title="Scan"
+              buttonStyle={{
+                borderRadius: 10,
+                backgroundColor: "#3a3c3d",
+              }}
+              titleStyle={styles.titleStyle}
+            />
+          </View>
         </View>
-      </Modal>
-      <Button
-        onPress={() => {
-          setSaveModalVisible(true);
-        }}
-        title="Save"
-        color="#1985bc"
-      />
-      <Button
-        onPress={() => {
-          setAddLectureModalVisible(true);
-        }}
-        title="Add Lecture"
-        color="#1985bc"
-      />
-      <Button
-        onPress={() => {
-          setAddModalVisible(true);
-        }}
-        title="add"
-        color="#1985bc"
-      />
-      <Button
-        onPress={() => {
-          console.log(transcript);
-        }}
-        title="bilgi"
-        color="#1985bc"
-      />
-      <Button onPress={jsonCek} title="json" color="#1985bc" />
-      <FlatList
-        data={transcript}
-        renderItem={({ item }) => (
-          <View style={{ padding: 10 }}>
-            <View style={{ borderWidth: 1, backgroundColor: "#5898fc" }}>
-              <Text
-                style={{
-                  alignSelf: "center",
-                  fontWeight: "bold",
-                }}
+        <View style={{ flex: 0.9, marginRight: 10, marginLeft: 10 }}>
+          <FlatList
+            data={transcript}
+            renderItem={({ item }) => (
+              <View
+                style={{ margin: 5, padding: 10, backgroundColor: "#f2f2f2" }}
               >
-                {item.semester} .Semester
-              </Text>
-            </View>
-            <Grid>
-              <Col size={50}>
-                <Row style={styles.cell}>
+                <View style={{ borderWidth: 1, backgroundColor: "#5898fc" }}>
                   <Text
                     style={{
                       alignSelf: "center",
                       fontWeight: "bold",
                     }}
                   >
-                    Lecture Name
+                    {item.semester} .Semester
                   </Text>
-                </Row>
-              </Col>
-              <Col size={15}>
-                <Row style={styles.cell}>
-                  <Text
-                    style={{
-                      alignSelf: "center",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Grade
-                  </Text>
-                </Row>
-              </Col>
-            </Grid>
-            <FlatList
-              data={item.lectures}
-              renderItem={({ item: item2 }) => (
+                </View>
                 <Grid>
                   <Col size={50}>
                     <Row style={styles.cell}>
-                      <Ionicons
-                        name="trash-outline"
-                        size={17}
-                        color="red"
+                      <Text
                         style={{
-                          position: "absolute",
-                          left: 0,
-                          borderRightWidth: 0.7,
-                          borderRightColor: "red",
-                        }}
-                        onPress={() => {
-                          let index = 0;
-                          transcript.every((element) => {
-                            if (element.semester == item.semester) {
-                              return false;
-                            }
-
-                            index++;
-                            return true;
-                          });
-                          deleteLecture(index, item2.id);
-                        }}
-                      />
-                      <TextInput
-                        style={{ paddingLeft: 20 }}
-                        multiline={true}
-                        onChangeText={(text) => {
-                          let temp = [...transcript];
-                          let semesterIndex = 0;
-                          let lectureIndex = 0;
-                          temp.every((element) => {
-                            if (element.semester == item.semester) {
-                              return false;
-                            }
-                            semesterIndex++;
-                            return true;
-                          });
-                          temp[semesterIndex].lectures.every((element) => {
-                            if (element.id == item2.id) {
-                              return false;
-                            }
-                            lectureIndex++;
-                            return true;
-                          });
-                          temp[semesterIndex].lectures[lectureIndex] = {
-                            ...temp[semesterIndex].lectures[lectureIndex],
-                            lecture: text,
-                          };
-                          setTranscript(temp);
+                          alignSelf: "center",
+                          fontWeight: "bold",
                         }}
                       >
-                        {item2.lecture}
-                      </TextInput>
+                        Lecture Name
+                      </Text>
                     </Row>
                   </Col>
                   <Col size={15}>
                     <Row style={styles.cell}>
-                      <TextInput
-                        multiline={true}
-                        maxLength={2}
-                        onChangeText={(text) => {
-                          let temp = [...transcript];
-                          let semesterIndex = 0;
-                          let lectureIndex = 0;
-                          temp.every((element) => {
-                            if (element.semester == item.semester) {
-                              return false;
-                            }
-                            semesterIndex++;
-                            return true;
-                          });
-                          temp[semesterIndex].lectures.every((element) => {
-                            if (element.id == item2.id) {
-                              return false;
-                            }
-                            lectureIndex++;
-                            return true;
-                          });
-                          temp[semesterIndex].lectures[lectureIndex] = {
-                            ...temp[semesterIndex].lectures[lectureIndex],
-                            grade: text,
-                          };
-                          setTranscript(temp);
+                      <Text
+                        style={{
+                          alignSelf: "center",
+                          fontWeight: "bold",
                         }}
                       >
-                        {item2.grade}
-                      </TextInput>
+                        Grade
+                      </Text>
                     </Row>
                   </Col>
                 </Grid>
-              )}
-              keyExtractor={(item2, index) => item2 + index}
-            />
-          </View>
-        )}
-        keyExtractor={(item, index) => item + index}
-      />
+                <FlatList
+                  data={item.lectures}
+                  renderItem={({ item: item2 }) => (
+                    <Grid>
+                      <Col size={50}>
+                        <Row style={styles.cell}>
+                          <TextInput
+                            style={{ paddingLeft: 20, alignSelf: "center" }}
+                            multiline={true}
+                            onChangeText={(text) => {
+                              let temp = [...transcript];
+                              let semesterIndex = 0;
+                              let lectureIndex = 0;
+                              temp.every((element) => {
+                                if (element.semester == item.semester) {
+                                  return false;
+                                }
+                                semesterIndex++;
+                                return true;
+                              });
+                              temp[semesterIndex].lectures.every((element) => {
+                                if (element.id == item2.id) {
+                                  return false;
+                                }
+                                lectureIndex++;
+                                return true;
+                              });
+                              temp[semesterIndex].lectures[lectureIndex] = {
+                                ...temp[semesterIndex].lectures[lectureIndex],
+                                lecture: text,
+                              };
+                              setTranscript(temp);
+                            }}
+                          >
+                            {item2.lecture}
+                          </TextInput>
+                        </Row>
+                      </Col>
+                      <Col size={15}>
+                        <Row style={styles.cell}>
+                          <TextInput
+                            multiline={true}
+                            maxLength={2}
+                            onChangeText={(text) => {
+                              let temp = [...transcript];
+                              let semesterIndex = 0;
+                              let lectureIndex = 0;
+                              temp.every((element) => {
+                                if (element.semester == item.semester) {
+                                  return false;
+                                }
+                                semesterIndex++;
+                                return true;
+                              });
+                              temp[semesterIndex].lectures.every((element) => {
+                                if (element.id == item2.id) {
+                                  return false;
+                                }
+                                lectureIndex++;
+                                return true;
+                              });
+                              temp[semesterIndex].lectures[lectureIndex] = {
+                                ...temp[semesterIndex].lectures[lectureIndex],
+                                grade: text,
+                              };
+                              setTranscript(temp);
+                            }}
+                          >
+                            {item2.grade}
+                          </TextInput>
+                          <Ionicons
+                            name="trash-outline"
+                            size={17}
+                            color="red"
+                            style={{
+                              position: "absolute",
+                              right: 0,
+                            }}
+                            onPress={() => {
+                              let index = 0;
+                              transcript.every((element) => {
+                                if (element.semester == item.semester) {
+                                  return false;
+                                }
+
+                                index++;
+                                return true;
+                              });
+                              deleteLecture(index, item2.id);
+                            }}
+                          />
+                        </Row>
+                      </Col>
+                    </Grid>
+                  )}
+                  keyExtractor={(item2, index) => item2 + index}
+                />
+              </View>
+            )}
+            keyExtractor={(item, index) => item + index}
+          />
+        </View>
+      </ImageBackground>
       <StatusBar hidden={true} />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -674,18 +737,57 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     justifyContent: "flex-start",
   },
-  enteredView: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 22,
-  },
-  modalView: {
+  addLecturModalView: {
+    flex: 0.51,
     margin: 20,
     backgroundColor: "white",
     borderRadius: 20,
     padding: 35,
-    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalView: {
+    flex: 0.05,
+    margin: 20,
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 35,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  scanModalView: {
+    flex: 0.15,
+    margin: 20,
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 35,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  saveModalView: {
+    flex: 0.3,
+    margin: 20,
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 35,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -703,9 +805,18 @@ const styles = StyleSheet.create({
   modalText: {
     marginBottom: 15,
     textAlign: "center",
+    fontWeight: "bold",
+    fontSize: 17,
   },
   modalButtonsContainer: {
     flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalButtonStyle: {
+    borderRadius: 10,
+    backgroundColor: "#3a3c3d",
+    marginLeft: 10,
   },
   /***** */
   cell: {
@@ -714,5 +825,17 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  titleStyle: {
+    marginLeft: 5,
+  },
+  errorText: {
+    color: "red",
+    paddingBottom: 15,
+    alignSelf: "center",
+  },
+  buttonStyle: {
+    borderRadius: 10,
+    backgroundColor: "#3a3c3d",
   },
 });
