@@ -37,8 +37,6 @@ function cardScreen({ firebase }) {
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [textLength, setTextLength] = useState(0);
-  const [bothloading, setBothloading] = useState({ uploading, textLength });
 
   const deleteCard = async (id) => {
     setUploading(true);
@@ -170,19 +168,6 @@ function cardScreen({ firebase }) {
     userdata.photo = await firebase.uploadImageAsync(manipResult.uri);
     userdata.localPhoto = manipResult.uri;
     parseText(response, userdata);
-    /*const asset = await MediaLibrary.createAssetAsync(manipResult.uri);
-    const album = await MediaLibrary.getAlbumAsync("KazOCR");
-    if (album === null) {
-      await MediaLibrary.createAlbumAsync("KazOCR", asset, false);
-    } else {
-      await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-    }
-    const assetResult = await MediaLibrary.getAssetsAsync({
-      first: 1,
-      album: album,
-      sortBy: MediaLibrary.SortBy.creationTime,
-    });
-    const hey = assetResult.assets[0];*/
   };
   const analyzeCard = async (response, imageInfo) => {
     cropImage(response, imageInfo);
