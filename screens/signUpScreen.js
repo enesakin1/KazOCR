@@ -47,11 +47,14 @@ class signUpScreen extends React.Component {
     }));
   };
   handleOnSignup = async (values, actions) => {
-    const { username, email, password } = values;
+    try {
+      const { username, email, password } = values;
 
-    const response = await this.props.firebase.signupWithEmail(email, password);
+      const response = await this.props.firebase.signupWithEmail(
+        email,
+        password
+      );
 
-    if (response.user.uid) {
       const { uid } = response.user;
       const created = Date.now();
       const userData = {
@@ -62,7 +65,7 @@ class signUpScreen extends React.Component {
       };
       await this.props.firebase.createNewUser(userData);
       this.props.navigation.navigate("App");
-    } else {
+    } catch (e) {
       actions.setSubmitting(false);
       alert("You have already signed up with this e-mail");
     }

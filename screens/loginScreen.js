@@ -13,6 +13,7 @@ import {
 import { Button, Input } from "react-native-elements";
 import { withFirebaseHOC } from "../config";
 import { StatusBar } from "expo-status-bar";
+import * as SplashScreen from "expo-splash-screen";
 
 const validationSchema = Yup.object().shape({
   email: Yup.string()
@@ -26,6 +27,13 @@ const validationSchema = Yup.object().shape({
 });
 const { width, height } = Dimensions.get("window");
 class loginScreen extends React.Component {
+  componentDidMount() {
+    async function prepare() {
+      await SplashScreen.hideAsync();
+    }
+    prepare();
+  }
+
   state = {
     passwordVisibility: true,
     rightIcon: "ios-eye",
@@ -41,12 +49,11 @@ class loginScreen extends React.Component {
   };
   handleOnLogin = async (values, actions) => {
     const { email, password } = values;
-    const response = await this.props.firebase.loginWithEmail(email, password);
-
-    if (response.user) {
+    try {
+      await this.props.firebase.loginWithEmail(email, password);
       this.props.navigation.navigate("App");
-    } else {
-      actions.setSubmitting(false);
+    } catch (e) {
+      await actions.setSubmitting(false);
       alert("Seems like there is no account like that. Try something else.");
     }
   };
