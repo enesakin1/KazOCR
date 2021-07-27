@@ -16,7 +16,6 @@
     "expo-file-system": "~11.1.3",
     "expo-image-manipulator": "~9.2.2",
     "expo-image-picker": "~10.2.2",
-    "expo-media-library": "^12.1.2",
     "expo-print": "~10.2.1",
     "expo-sharing": "~9.2.1",
     "expo-splash-screen": "~0.11.2",

@@ -22,7 +22,6 @@ import {
   RichToolbar,
 } from "react-native-pell-rich-editor";
 import * as Print from "expo-print";
-import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
 import { Ionicons } from "@expo/vector-icons";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
@@ -104,8 +103,8 @@ function textScreen({ firebase }) {
     });
   };
 
-  const createPDF = async (saveWay) => {
-    setUploading(true);
+  const createPDF = async () => {
+    setUploading(false);
     try {
       let { text } = state;
       let fileInfo = await Print.printToFileAsync({
@@ -114,40 +113,30 @@ function textScreen({ firebase }) {
         width: 612,
         base64: false,
       });
-      setUploading(false);
-      if (saveWay === "Share") {
-        let pdfName =
-          fileInfo.uri.slice(0, fileInfo.uri.lastIndexOf("Print/")) +
-          filename +
-          ".pdf";
-        await FileSystem.moveAsync({
-          from: fileInfo.uri,
-          to: pdfName,
-        });
-        const result = await Sharing.shareAsync(pdfName);
-        if (result.action === Sharing.sharedAction) {
-          ToastAndroid.show("Successful shared!", ToastAndroid.LONG);
-        }
-      } else if (saveWay === "Save") {
-        const asset = await MediaLibrary.createAssetAsync(fileInfo.uri);
-        const album = await MediaLibrary.getAlbumAsync("KazOCR");
-        if (album == null) {
-          await MediaLibrary.createAlbumAsync("KazOCR", asset, false);
-        } else {
-          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-        }
-        ToastAndroid.show(
-          "Successful saved! (Check KazOCR folder)",
-          ToastAndroid.LONG
-        );
+      let pdfName =
+        fileInfo.uri.slice(0, fileInfo.uri.lastIndexOf("Print/")) +
+        filename +
+        ".pdf";
+      await FileSystem.moveAsync({
+        from: fileInfo.uri,
+        to: pdfName,
+      });
+      const result = await Sharing.shareAsync(pdfName);
+      if (result.action === Sharing.sharedAction) {
+        ToastAndroid.show("Successful shared!", ToastAndroid.LONG);
       }
+      await FileSystem.deleteAsync(pdfName);
     } catch (err) {
       console.log("Save err: ", err);
-      setUploading(false);
     }
   };
 
   const takePhoto = async () => {
+    const { status } = await ImagePicker.getCameraPermissionsAsync();
+    if (status != "granted") {
+      alert("Need permission to use your camera");
+      return;
+    }
     let pickerResult = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
     });
@@ -157,6 +146,11 @@ function textScreen({ firebase }) {
   };
 
   const pickImage = async () => {
+    const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+    if (status != "granted") {
+      alert("Need permission to use your media library");
+      return;
+    }
     let pickerResult = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
     });
@@ -232,7 +226,7 @@ function textScreen({ firebase }) {
                     } else {
                       setErrorText("");
                       setSaveModalVisible(!saveModalVisible);
-                      createPDF("Share");
+                      createPDF();
                     }
                   }}
                 />
@@ -312,21 +306,6 @@ function textScreen({ firebase }) {
                   flex: 0.8,
                 }}
               >
-                <TouchableOpacity
-                  onPress={() => {
-                    if (state.text.length < 19) {
-                      ToastAndroid.show(
-                        "Text must be contain at least 20 characters",
-                        ToastAndroid.SHORT
-                      );
-                      return;
-                    }
-                    createPDF("Save");
-                  }}
-                  style={{ marginLeft: 10 }}
-                >
-                  <Ionicons name="save-sharp" color={"#3a3c3d"} size={32} />
-                </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => {
                     setSaveModalVisible(true);

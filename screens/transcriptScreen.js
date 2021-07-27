@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   View,
@@ -11,16 +11,15 @@ import {
   ToastAndroid,
   SafeAreaView,
   ImageBackground,
+  TextInput,
 } from "react-native";
-import { Button, Input } from "react-native-elements";
+import { Button, Input, CheckBox } from "react-native-elements";
 import * as ImagePicker from "expo-image-picker";
 import { withFirebaseHOC } from "../config";
 import * as FileSystem from "expo-file-system";
 import * as Print from "expo-print";
-import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
 import { Ionicons } from "@expo/vector-icons";
-import { TextInput } from "react-native";
 import { Col, Row, Grid } from "react-native-easy-grid";
 
 function transcriptScreen({ firebase }) {
@@ -35,6 +34,7 @@ function transcriptScreen({ firebase }) {
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [pdfSelected, setPDFSelection] = useState(true);
 
   const deleteLecture = (index, id) => {
     let temp = [...transcript];
@@ -59,7 +59,7 @@ function transcriptScreen({ firebase }) {
     setLastLecture(counter);
     setTranscript(temp);
   };
-  const createHTML = (saveWay) => {
+  const createHTML = () => {
     setUploading(true);
     const hasSingle = transcript.length % 2 == 0 ? false : true;
     let printHTML = "<div>";
@@ -110,7 +110,7 @@ function transcriptScreen({ firebase }) {
       printHTML += "</div>";
     }
     printHTML += "</div>";
-    createPDF(printHTML, saveWay);
+    createPDF(printHTML);
   };
   const parseText = async (response) => {
     if (typeof response.responses[0].textAnnotations === "undefined") {
@@ -122,7 +122,6 @@ function transcriptScreen({ firebase }) {
       /[\n\r]+/gm,
       " "
     );
-
     let regex = /ders(.*)/gi;
     let replaced = text.replace(regex, "");
     if (replaced.length < 1) {
@@ -217,11 +216,31 @@ function transcriptScreen({ firebase }) {
     setTranscript(tempTranscript);
     setUploading(false);
   };
+  const createJSON = async () => {
+    setUploading(true);
+    setPDFSelection(true);
 
-  const analyzeTranscript = async (response) => {
-    parseText(response);
+    let temp = [...transcript];
+    temp.forEach((semester) => {
+      semester.lectures.forEach((lecture) => {
+        delete lecture["id"];
+      });
+    });
+    try {
+      let uri = FileSystem.cacheDirectory + filename + `.json`;
+      await FileSystem.writeAsStringAsync(uri, JSON.stringify(temp));
+      const result = await Sharing.shareAsync(uri);
+      if (result.action === Sharing.sharedAction) {
+        ToastAndroid.show("Successful shared!", ToastAndroid.LONG);
+      }
+      await FileSystem.deleteAsync(uri);
+    } catch (e) {
+      console.log(e);
+    }
+    setUploading(false);
   };
-  const createPDF = async (html, saveWay) => {
+  const createPDF = async (html) => {
+    setUploading(false);
     try {
       let fileInfo = await Print.printToFileAsync({
         html: html,
@@ -229,40 +248,31 @@ function transcriptScreen({ firebase }) {
         width: 612,
         base64: false,
       });
-      setUploading(false);
-      if (saveWay === "Share") {
-        let pdfName =
-          fileInfo.uri.slice(0, fileInfo.uri.lastIndexOf("Print/")) +
-          filename +
-          ".pdf";
-        await FileSystem.moveAsync({
-          from: fileInfo.uri,
-          to: pdfName,
-        });
-        const result = await Sharing.shareAsync(pdfName);
-        if (result.action === Sharing.sharedAction) {
-          ToastAndroid.show("Successful shared!", ToastAndroid.LONG);
-        }
-      } else if (saveWay === "Save") {
-        const asset = await MediaLibrary.createAssetAsync(fileInfo.uri);
-        const album = await MediaLibrary.getAlbumAsync("KazOCR");
-        if (album == null) {
-          await MediaLibrary.createAlbumAsync("KazOCR", asset, false);
-        } else {
-          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-        }
-        ToastAndroid.show(
-          "Successful saved! (Check KazOCR folder)",
-          ToastAndroid.LONG
-        );
+
+      let pdfName =
+        fileInfo.uri.slice(0, fileInfo.uri.lastIndexOf("Print/")) +
+        filename +
+        ".pdf";
+      await FileSystem.moveAsync({
+        from: fileInfo.uri,
+        to: pdfName,
+      });
+      const result = await Sharing.shareAsync(pdfName);
+      if (result.action === Sharing.sharedAction) {
+        ToastAndroid.show("Successful shared!", ToastAndroid.LONG);
       }
+      await FileSystem.deleteAsync(pdfName);
     } catch (err) {
       console.log("Save err: ", err);
-      setUploading(false);
     }
   };
 
   const takePhoto = async () => {
+    const { status } = await ImagePicker.getCameraPermissionsAsync();
+    if (status != "granted") {
+      alert("Need permission to use your camera");
+      return;
+    }
     let pickerResult = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
     });
@@ -272,6 +282,11 @@ function transcriptScreen({ firebase }) {
   };
 
   const pickImage = async () => {
+    const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+    if (status != "granted") {
+      alert("Need permission to use your media library");
+      return;
+    }
     let pickerResult = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
     });
@@ -292,7 +307,8 @@ function transcriptScreen({ firebase }) {
         requestedFeatures,
         uploadUrl
       );
-      analyzeTranscript(response);
+      await firebase.deleteImageAsync(uploadUrl);
+      parseText(response);
     } catch (e) {
       console.log(e);
       alert("Upload failed, somehow");
@@ -314,22 +330,41 @@ function transcriptScreen({ firebase }) {
           onShow={() => {
             setFilename("");
             setErrorText("");
+            setPDFSelection(true);
           }}
           onRequestClose={() => {
             setSaveModalVisible(!saveModalVisible);
           }}
         >
           <View style={styles.saveModalView}>
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 5 }}>
               <Text style={styles.modalText}>Enter filename</Text>
+
               <Input
                 onChangeText={(value) => setFilename(value)}
                 placeholder="Filename..."
                 style={{ backgroundColor: "white" }}
               />
+              <CheckBox
+                center
+                title="JSON"
+                iconRight
+                iconType="material"
+                checked={pdfSelected}
+                checkedIcon="clear"
+                uncheckedIcon="check"
+                onPress={() => setPDFSelection(!pdfSelected)}
+              />
               <Text style={styles.errorText}>{errorText}</Text>
             </View>
-            <View style={styles.modalButtonsContainer}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "center",
+                alignItems: "center",
+                flex: 0.2,
+              }}
+            >
               <Button
                 title="Confirm"
                 buttonStyle={styles.modalButtonStyle}
@@ -341,7 +376,11 @@ function transcriptScreen({ firebase }) {
                   } else {
                     setErrorText("");
                     setSaveModalVisible(!saveModalVisible);
-                    createHTML("Share");
+                    if (pdfSelected) {
+                      createHTML();
+                    } else {
+                      createJSON();
+                    }
                   }
                 }}
               />
@@ -413,7 +452,7 @@ function transcriptScreen({ firebase }) {
             setAddLectureModalVisible(!addLectureModalVisible);
           }}
         >
-          <View style={styles.addLecturModalView}>
+          <View style={styles.addLectureModalView}>
             <Text style={styles.modalText}>Add Lecture</Text>
 
             <Input
@@ -498,21 +537,6 @@ function transcriptScreen({ firebase }) {
           >
             <TouchableOpacity
               onPress={() => {
-                if (transcript.length == 0) {
-                  ToastAndroid.show(
-                    "Scan least 1 transcript",
-                    ToastAndroid.SHORT
-                  );
-                  return;
-                }
-                createHTML("Save");
-              }}
-              style={{ marginLeft: 10 }}
-            >
-              <Ionicons name="save-sharp" color={"#3a3c3d"} size={32} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => {
                 setSaveModalVisible(true);
               }}
               style={{ marginLeft: 15 }}
@@ -522,7 +546,7 @@ function transcriptScreen({ firebase }) {
           </View>
           <View
             style={{
-              flex: 1.1,
+              flex: 1.35,
               alignItems: "flex-start",
               justifyContent: "center",
               flexDirection: "row",
@@ -718,8 +742,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     justifyContent: "flex-start",
   },
-  addLecturModalView: {
-    flex: 0.51,
+  addLectureModalView: {
+    flex: 0.6,
     margin: 20,
     backgroundColor: "white",
     borderRadius: 20,
@@ -764,7 +788,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   saveModalView: {
-    flex: 0.3,
+    flex: 0.4,
     margin: 20,
     backgroundColor: "white",
     borderRadius: 20,

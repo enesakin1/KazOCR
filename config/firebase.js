@@ -29,17 +29,8 @@ const Firebase = {
       .doc(`${userData.uid}`)
       .set(userData);
   },
-  deleteImageAsync: async (photoURI, fullPhotuURI) => {
-    await firebase
-      .storage()
-      .refFromURL(photoURI)
-      .delete()
-      .catch((err) => console.log(err));
-    return await firebase
-      .storage()
-      .refFromURL(fullPhotuURI)
-      .delete()
-      .catch((err) => console.log(err));
+  deleteImageAsync: async (photoURI) => {
+    return await firebase.storage().refFromURL(photoURI).delete();
   },
   uploadImageAsync: async (uri) => {
     const blob = await new Promise((resolve, reject) => {

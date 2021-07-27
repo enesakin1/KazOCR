@@ -18,7 +18,6 @@ import * as ImagePicker from "expo-image-picker";
 import { withFirebaseHOC } from "../config";
 import * as FileSystem from "expo-file-system";
 import * as Print from "expo-print";
-import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
 import * as ImageManipulator from "expo-image-manipulator";
 import { Ionicons } from "@expo/vector-icons";
@@ -26,10 +25,6 @@ import { TextInput } from "react-native";
 
 function cardScreen({ firebase }) {
   const defaultPhotoURL = "gs://kazocr-50026.appspot.com/defaultPhoto.png";
-  const [state, setState] = useState({
-    image: "",
-    text: "",
-  });
   const [errorText, setErrorText] = useState("");
   const [scanCounter, setScanCounter] = useState(-1);
   const [people, setPeople] = useState([]);
@@ -44,12 +39,20 @@ function cardScreen({ firebase }) {
     setScanCounter(counter);
     let temp = [...people];
     temp.splice(id, 1);
-    await FileSystem.deleteAsync(people[id].localPhoto);
-    await firebase.deleteImageAsync(people[id].photo, people[id].fullPhoto);
+    try {
+      if (people[id].localPhoto !== defaultPhotoURL) {
+        await FileSystem.deleteAsync(people[id].localPhoto);
+        await firebase.deleteImageAsync(people[id].photo);
+      }
+      await firebase.deleteImageAsync(people[id].fullPhoto);
+    } catch (e) {
+      console.log(e);
+    }
+
     setPeople(temp);
     setUploading(false);
   };
-  const createHTML = (saveWay) => {
+  const createHTML = () => {
     setUploading(true);
     let baseHTML =
       '<div style="padding-top: 10px;"> \
@@ -67,7 +70,7 @@ function cardScreen({ firebase }) {
       printHTML = printHTML.replace("SURNAMExx", people[index].surname);
       printHTML = printHTML.replace("NUMBERxx", people[index].number);
     }
-    createPDF(printHTML, saveWay);
+    createPDF(printHTML);
   };
   const parseText = async (response, userdata) => {
     if (typeof response.responses[0].textAnnotations === "undefined") {
@@ -149,7 +152,7 @@ function cardScreen({ firebase }) {
     imageInfo.x = person.boundingPoly.normalizedVertices[3].x * width;
     imageInfo.y = person.boundingPoly.normalizedVertices[3].y * height;
 
-    let fileUri = FileSystem.documentDirectory + "test.png";
+    let fileUri = FileSystem.cacheDirectory + "test.png";
     await FileSystem.downloadAsync(imageInfo.uri, fileUri);
     const manipResult = await ImageManipulator.manipulateAsync(
       fileUri,
@@ -169,10 +172,8 @@ function cardScreen({ firebase }) {
     userdata.localPhoto = manipResult.uri;
     parseText(response, userdata);
   };
-  const analyzeCard = async (response, imageInfo) => {
-    cropImage(response, imageInfo);
-  };
-  const createPDF = async (html, saveWay) => {
+  const createPDF = async (html) => {
+    setUploading(false);
     try {
       let fileInfo = await Print.printToFileAsync({
         html: html,
@@ -180,40 +181,30 @@ function cardScreen({ firebase }) {
         width: 612,
         base64: false,
       });
-      setUploading(false);
-      if (saveWay === "Share") {
-        let pdfName =
-          fileInfo.uri.slice(0, fileInfo.uri.lastIndexOf("Print/")) +
-          filename +
-          ".pdf";
-        await FileSystem.moveAsync({
-          from: fileInfo.uri,
-          to: pdfName,
-        });
-        const result = await Sharing.shareAsync(pdfName);
-        if (result.action === Sharing.sharedAction) {
-          ToastAndroid.show("Successful shared!", ToastAndroid.LONG);
-        }
-      } else if (saveWay === "Save") {
-        const asset = await MediaLibrary.createAssetAsync(fileInfo.uri);
-        const album = await MediaLibrary.getAlbumAsync("KazOCR");
-        if (album == null) {
-          await MediaLibrary.createAlbumAsync("KazOCR", asset, false);
-        } else {
-          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-        }
-        ToastAndroid.show(
-          "Successful saved! (Check KazOCR folder)",
-          ToastAndroid.LONG
-        );
+      let pdfName =
+        fileInfo.uri.slice(0, fileInfo.uri.lastIndexOf("Print/")) +
+        filename +
+        ".pdf";
+      await FileSystem.moveAsync({
+        from: fileInfo.uri,
+        to: pdfName,
+      });
+      const result = await Sharing.shareAsync(pdfName);
+      if (result.action === Sharing.sharedAction) {
+        ToastAndroid.show("Successful shared!", ToastAndroid.LONG);
       }
+      await FileSystem.deleteAsync(pdfName);
     } catch (err) {
       console.log("Save err: ", err);
-      setUploading(false);
     }
   };
 
   const takePhoto = async () => {
+    const { status } = await ImagePicker.getCameraPermissionsAsync();
+    if (status != "granted") {
+      alert("Need permission to use your camera");
+      return;
+    }
     let pickerResult = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
     });
@@ -223,6 +214,11 @@ function cardScreen({ firebase }) {
   };
 
   const pickImage = async () => {
+    const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+    if (status != "granted") {
+      alert("Need permission to use your media library");
+      return;
+    }
     let pickerResult = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
     });
@@ -235,7 +231,6 @@ function cardScreen({ firebase }) {
     try {
       setUploading(true);
       let uploadUrl = await firebase.uploadImageAsync(pickerResult.uri);
-      setState({ image: uploadUrl });
       let requestedFeatures = [
         { type: "TEXT_DETECTION", maxResults: 5 },
         { type: "OBJECT_LOCALIZATION", maxResults: 5 },
@@ -251,7 +246,7 @@ function cardScreen({ firebase }) {
         height: pickerResult.height,
         width: pickerResult.width,
       };
-      analyzeCard(response, imageInfo);
+      cropImage(response, imageInfo);
     } catch (e) {
       console.log(e);
       alert("Upload failed, somehow");
@@ -445,7 +440,7 @@ function cardScreen({ firebase }) {
                   } else {
                     setErrorText("");
                     setSaveModalVisible(!saveModalVisible);
-                    createHTML("Share");
+                    createHTML();
                   }
                 }}
               />
@@ -516,18 +511,6 @@ function cardScreen({ firebase }) {
             alignItems: "center",
           }}
         >
-          <TouchableOpacity
-            onPress={() => {
-              if (people.length == 0) {
-                ToastAndroid.show("Scan at least 1 card", ToastAndroid.SHORT);
-                return;
-              }
-              createHTML("Save");
-            }}
-            style={{ marginLeft: 10 }}
-          >
-            <Ionicons name="save-sharp" color={"#3a3c3d"} size={32} />
-          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => {
               setSaveModalVisible(true);
