@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   saveModalView: {
-    flex: 0.3,
+    flex: 0.33,
     margin: 20,
     backgroundColor: "white",
     borderRadius: 20,
