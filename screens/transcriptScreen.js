@@ -122,97 +122,83 @@ function transcriptScreen({ firebase }) {
       /[\n\r]+/gm,
       " "
     );
-    let regex = /ders(.*)/gi;
-    let replaced = text.replace(regex, "");
-    if (replaced.length < 1) {
-      setUploading(false);
-      return;
-    }
-    let lectureCounter = 0;
-    let startSemester = replaced[0];
-    const columnCount = (replaced.match(/\byar[ıi]y[ıi]l\b/gi) || []).length;
-    const semesterCount = (text.match(/\byar[ıi]y[ıi]l\b/gi) || []).length;
-    if (semesterCount == 0 && columnCount == 0) {
-      setUploading(false);
-      return;
-    }
-    const rowCount = semesterCount / columnCount;
-    const rowSingle =
-      semesterCount - rowCount * columnCount == 1 ? true : false;
-    let matches = [];
-    let textColumn = [];
-    regex = /Toplam\s*AKTS(.*)/gi;
-    for (let i = 0; i <= semesterCount - columnCount; i += columnCount) {
-      let temp = "";
-      for (let j = i; j < i + columnCount; j++) {
-        temp = text.replace(regex, "");
-        let tempRegex = /(.*notu\s*akts\s*)/gi;
-        temp = temp.replace(tempRegex, "");
-        textColumn.push(temp);
-        let matches = regex.exec(text);
-        if (matches != null && matches.length > 1) {
-          text = matches[1];
-        }
-      }
-    }
-    let firstIndex = rowSingle ? semesterCount - 1 : semesterCount;
-    regex =
-      /(?:.*(?:ortalama|,[0-9]{2}))?\s*(.*?)\s*\w+[ç]?\w+[ıi]?\s*([a-z]{2})\s*[0-9]/gi;
+
+    let regex = /([0-9])\W\s*yarıyıl/gi;
+    let match = [];
     let tempTranscript = [];
-    let tempCoulumnCount = 0;
-    let lastCoulumns = [];
+    let lectureCounter = 0;
+    let semesterCount = 0;
+    while ((match = regex.exec(text)) !== null) {
+      semesterCount++;
+      tempTranscript.push({ semester: match[1], lectures: [] });
+    }
+    if (semesterCount == 0) {
+      setUploading(false);
+      return;
+    }
+
     for (let index = 0; index < semesterCount; index++) {
-      tempTranscript.push({ semester: startSemester, lectures: [] });
-      startSemester++;
-    }
-    for (let i = 0; i < firstIndex; i++) {
-      if (i != 0 && i % columnCount == 0) {
-        tempCoulumnCount += columnCount;
+      //Semester
+      if (index == semesterCount - 1) {
+        var regSemester =
+          "(" + tempTranscript[index].semester + "\\s*.\\s*yar[ıi]y[ıi]l.*)";
+      } else {
+        var regSemester =
+          "(" +
+          tempTranscript[index].semester +
+          "\\s*.\\s*yar[ıi]y[ıi]l.*)" +
+          tempTranscript[index + 1].semester +
+          "\\s*.\\s*yar[ıi]y[ıi]l";
       }
-      let counter = tempCoulumnCount;
-      while ((matches = regex.exec(textColumn[i])) !== null) {
-        let lectureInfo = { id: lectureCounter, lecture: "", grade: "" };
-        if (matches.length > 2);
-        {
-          lectureInfo.lecture = matches[1];
-          lectureInfo.grade = matches[2];
+      regex = new RegExp(regSemester, "gi");
+      match = regex.exec(text);
+      if (match !== null) {
+        var semesterString = match[1];
+
+        //countLecture
+        regex = /(\S{3}[0-9]{3})/g;
+        while ((match = regex.exec(semesterString)) !== null) {
           lectureCounter++;
+          const tempLecture = {
+            id: lectureCounter,
+            lecture: match[1],
+            grade: "ER",
+          };
+          tempTranscript[index].lectures.push(tempLecture);
         }
-        if (i % columnCount == 0) {
-          if (counter >= columnCount + tempCoulumnCount) {
-            counter = tempCoulumnCount;
+        const semesterLecturesCounter = tempTranscript[index].lectures.length;
+        for (let i = 0; i < semesterLecturesCounter; i++) {
+          if (i == semesterLecturesCounter - 1) {
+            var regSemester =
+              tempTranscript[index].lectures[i].lecture +
+              "\\s*(.*?)\\s*(?:[0-9]|açıklama|toplam|[DF(C|С)(B|В)(A|А)]{2}\\s)";
+          } else {
+            var regSemester =
+              tempTranscript[index].lectures[i].lecture +
+              "\\s*(.*?)\\s*(?:" +
+              tempTranscript[index].lectures[i + 1].lecture +
+              "|[0-9]|açıklama|toplam|[DF(C|С)(B|В)(A|А)]{2}\\s)";
           }
-          tempTranscript[counter].lectures.push(lectureInfo);
-        } else {
-          counter++;
-          while (lastCoulumns.includes(counter)) {
-            counter++;
+          regex = new RegExp(regSemester, "gi");
+          match = regex.exec(semesterString);
+          if (match !== null) {
+            tempTranscript[index].lectures[i].lecture = match[1];
           }
-          if (counter >= columnCount + tempCoulumnCount) {
-            counter = tempCoulumnCount;
+
+          //Grade
+          regex = /([DF(C|С)(B|В)(A|А)]{2})\s/g;
+          var tempCounter = 0;
+          while ((match = regex.exec(semesterString)) !== null) {
+            if (tempCounter == semesterLecturesCounter) {
+              break;
+            }
+            tempTranscript[index].lectures[tempCounter].grade = match[1];
+            tempCounter++;
           }
-          tempTranscript[counter].lectures.push(lectureInfo);
         }
-        counter++;
       }
-      if (i % columnCount == 0) {
-        lastCoulumns.length = 0;
-      }
-      lastCoulumns.push(counter);
     }
-    if (rowSingle) {
-      while ((matches = regex.exec(textColumn[semesterCount - 1])) !== null) {
-        let lectureInfo = { id: lectureCounter, lecture: "", grade: "" };
-        if (matches.length > 2);
-        {
-          lectureInfo.lecture = matches[1];
-          lectureInfo.grade = matches[2];
-          lectureCounter++;
-        }
-        tempTranscript[semesterCount - 1].lectures.push(lectureInfo);
-      }
-    }
-    setLastLecture(lectureCounter);
+    setLastLecture(lectureCounter + 1);
     setTranscript(tempTranscript);
     setUploading(false);
   };
@@ -299,10 +285,7 @@ function transcriptScreen({ firebase }) {
     try {
       setUploading(true);
       let uploadUrl = await firebase.uploadImageAsync(pickerResult.uri);
-      let requestedFeatures = [
-        { type: "DOCUMENT_TEXT_DETECTION", maxResults: 5 },
-        { type: "OBJECT_LOCALIZATION", maxResults: 5 },
-      ];
+      let requestedFeatures = [{ type: "TEXT_DETECTION", maxResults: 5 }];
       let response = await firebase.submitToCloudVision(
         requestedFeatures,
         uploadUrl
